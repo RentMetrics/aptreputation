@@ -16,9 +16,11 @@ import type {
 import type * as aiAnalysis from "../aiAnalysis.js";
 import type * as auditLogs from "../auditLogs.js";
 import type * as googleApis from "../googleApis.js";
+import type * as googlePlaces from "../googlePlaces.js";
 import type * as properties from "../properties.js";
 import type * as propertySync from "../propertySync.js";
 import type * as reviews from "../reviews.js";
+import type * as userProperties from "../userProperties.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -32,9 +34,11 @@ declare const fullApi: ApiFromModules<{
   aiAnalysis: typeof aiAnalysis;
   auditLogs: typeof auditLogs;
   googleApis: typeof googleApis;
+  googlePlaces: typeof googlePlaces;
   properties: typeof properties;
   propertySync: typeof propertySync;
   reviews: typeof reviews;
+  userProperties: typeof userProperties;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

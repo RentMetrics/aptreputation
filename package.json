@@ -12,6 +12,7 @@
     "@clerk/nextjs": "^6.28.1",
     "@googlemaps/js-api-loader": "^1.16.10",
     "@radix-ui/react-dialog": "^1.1.14",
+    "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-slot": "^1.2.3",
     "@stripe/react-stripe-js": "^3.9.0",
     "@stripe/stripe-js": "^7.8.0",

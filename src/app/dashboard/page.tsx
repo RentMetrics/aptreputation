@@ -17,8 +17,8 @@ import {
   Plus,
   Eye
 } from "lucide-react"
-import Link from "next/link"
 import { GoogleIntegrationStatus } from "@/components/google-integration-status"
+import { AddPropertyDialog } from "@/components/add-property-dialog"
 
 export default function CustomerDashboard() {
   const [selectedProperty, setSelectedProperty] = useState(0)
@@ -117,12 +117,7 @@ export default function CustomerDashboard() {
             </div>
           </div>
           <div className="flex gap-3">
-            <Link href="/admin/bulk-upload">
-              <Button variant="outline">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Property
-              </Button>
-            </Link>
+            <AddPropertyDialog />
             <Button>
               <Settings className="h-4 w-4 mr-2" />
               Settings

@@ -146,10 +146,10 @@ export const analyzeReviews = mutation({
     if (negativeReviews > positiveReviews) {
       recommendations.push("Focus on addressing negative feedback promptly");
     }
-    if (topNegativeThemes.includes("Maintenance")) {
+    if (negativeThemes.includes("Maintenance")) {
       recommendations.push("Improve maintenance response times and communication");
     }
-    if (topNegativeThemes.includes("Noise")) {
+    if (negativeThemes.includes("Noise")) {
       recommendations.push("Consider soundproofing improvements and noise policies");
     }
     if (topPositiveThemes.includes("Staff")) {

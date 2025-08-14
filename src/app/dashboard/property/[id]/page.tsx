@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -21,15 +21,27 @@ import {
   X
 } from "lucide-react"
 
-export default function PropertyDetail({ params }: { params: { id: string } }) {
+export default function PropertyDetail({ params }: { params: Promise<{ id: string }> }) {
+  const [propertyId, setPropertyId] = useState<string>("")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedFilter, setSelectedFilter] = useState("all")
   const [editingResponse, setEditingResponse] = useState<string | null>(null)
   const [responseText, setResponseText] = useState("")
   
+  // Handle async params
+  React.useEffect(() => {
+    params.then((resolvedParams) => {
+      setPropertyId(resolvedParams.id)
+    })
+  }, [params])
+  
+  if (!propertyId) {
+    return <div>Loading...</div>
+  }
+  
   // Mock data - in real implementation this would come from the database
   const property = {
-    id: params.id,
+    id: propertyId,
     name: "Sunset Apartments",
     address: "123 Main St, Austin, TX",
     googleRating: 4.3,

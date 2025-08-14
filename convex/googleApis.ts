@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, action } from "./_generated/server";
 
 // Store OAuth tokens for a user
 export const storeOAuthTokens = mutation({
@@ -234,5 +234,125 @@ export const getPropertiesWithGoogleMappings = query({
     );
 
     return propertiesWithMappings.filter(item => item.property && item.googleLocation);
+  },
+});
+
+// Gemini AI Functions
+export const analyzeReviewWithGemini = action({
+  args: {
+    reviewText: v.string(),
+    apiKey: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${args.apiKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: `Analyze this review and provide: 1) Sentiment (positive/negative/neutral), 2) Key themes, 3) Whether it needs a response (true/false). Review: ${args.reviewText}`
+              }]
+            }]
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Gemini API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.candidates[0].content.parts[0].text;
+    } catch (error) {
+      console.error("Error analyzing review with Gemini:", error);
+      throw error;
+    }
+  },
+});
+
+export const generateAIResponseWithGemini = action({
+  args: {
+    reviewText: v.string(),
+    propertyName: v.string(),
+    apiKey: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${args.apiKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: `Generate a professional, empathetic response to this negative review for ${args.propertyName}. Keep it under 200 words and be helpful. Review: ${args.reviewText}`
+              }]
+            }]
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Gemini API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.candidates[0].content.parts[0].text;
+    } catch (error) {
+      console.error("Error generating AI response with Gemini:", error);
+      throw error;
+    }
+  },
+});
+
+export const generatePropertyAnalysisWithGemini = action({
+  args: {
+    reviews: v.array(v.object({
+      reviewText: v.string(),
+      rating: v.number(),
+      sentiment: v.string(),
+    })),
+    propertyName: v.string(),
+    apiKey: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const reviewsText = args.reviews.map(r => `${r.rating}/5 - ${r.sentiment}: ${r.reviewText}`).join('\n');
+      
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${args.apiKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: `Analyze these reviews for ${args.propertyName} and provide: 1) Overall sentiment analysis, 2) Key themes and patterns, 3) Areas for improvement, 4) Positive aspects to highlight. Reviews:\n${reviewsText}`
+              }]
+            }]
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Gemini API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.candidates[0].content.parts[0].text;
+    } catch (error) {
+      console.error("Error generating property analysis with Gemini:", error);
+      throw error;
+    }
   },
 }); 

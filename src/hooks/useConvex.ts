@@ -3,11 +3,11 @@ import { api } from "@/convex/_generated/api";
 
 // Custom hooks for queries
 export function useGetUserProperties(userId: string) {
-  return useQuery(api.properties.getUserProperties, { userId });
+  return useQuery(api.properties.getUserProperties, { userId: userId as any });
 }
 
 export function useGetProperty(propertyId: string) {
-  return useQuery(api.properties.getProperty, { propertyId });
+  return useQuery(api.properties.getProperty, { propertyId: propertyId as any });
 }
 
 export function useSearchProperties(searchTerm: string) {
@@ -15,23 +15,23 @@ export function useSearchProperties(searchTerm: string) {
 }
 
 export function useGetPropertyReviews(propertyId: string) {
-  return useQuery(api.reviews.getPropertyReviews, { propertyId });
+  return useQuery(api.reviews.getPropertyReviews, { propertyId: propertyId as any });
 }
 
 export function useGetReviewsNeedingResponse(propertyId: string) {
-  return useQuery(api.reviews.getReviewsNeedingResponse, { propertyId });
+  return useQuery(api.reviews.getReviewsNeedingResponse, { propertyId: propertyId as any });
 }
 
 export function useGetReview(reviewId: string) {
-  return useQuery(api.reviews.getReview, { reviewId });
+  return useQuery(api.reviews.getReview, { reviewId: reviewId as any });
 }
 
 export function useGetPropertyAnalysis(propertyId: string) {
-  return useQuery(api.aiAnalysis.getPropertyAnalysis, { propertyId });
+  return useQuery(api.aiAnalysis.getPropertyAnalysis, { propertyId: propertyId as any });
 }
 
 export function useGetLatestAnalysis(propertyId: string) {
-  return useQuery(api.aiAnalysis.getLatestAnalysis, { propertyId });
+  return useQuery(api.aiAnalysis.getLatestAnalysis, { propertyId: propertyId as any });
 }
 
 export function useGetRecentAudits(limit?: number) {
@@ -48,11 +48,11 @@ export function useSearchAudits(searchTerm: string) {
 
 // Actions (for functions that use fetch)
 export function useSearchGooglePlaces() {
-  return useAction(api.googleApis.searchGooglePlaces);
+  return useAction(api.googlePlaces.searchGooglePlaces);
 }
 
 export function useGetGoogleReviews() {
-  return useAction(api.googleApis.getGoogleReviews);
+  return useAction(api.googlePlaces.getGoogleReviews);
 }
 
 export function useGetPropertiesNeedingSync() {

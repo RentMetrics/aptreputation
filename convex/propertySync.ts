@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { api } from "./_generated/api";
 
 // Sync a property with Google Maps to get Place ID and basic info
 export const syncPropertyWithGoogle = mutation({
@@ -73,7 +74,7 @@ export const syncAllPropertiesWithGoogle = mutation({
 
       for (const property of properties) {
         try {
-          const result = await ctx.scheduler.runAfter(0, "propertySync:syncPropertyWithGoogle", {
+          const result = await ctx.scheduler.runAfter(0, api.propertySync.syncPropertyWithGoogle, {
             propertyId: property._id,
             googleMapsApiKey: args.googleMapsApiKey,
           });

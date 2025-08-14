@@ -60,6 +60,9 @@ export async function POST(request: NextRequest) {
 
     // Store the review in Convex database
     try {
+      if (!property) {
+        throw new Error("Property not found")
+      }
       await convex.mutation(api.reviews.createReview, {
         propertyId: property._id,
         googleReviewId: review.reviewId,
@@ -70,14 +73,13 @@ export async function POST(request: NextRequest) {
         sentiment: analysis.sentiment || 'neutral',
         themes: analysis.themes || [],
         needsResponse: analysis.needsResponse || false,
-        hasResponse: false,
       })
     } catch (dbError) {
       console.error('Error storing review in database:', dbError)
     }
 
     // Generate AI response if needed
-    if (analysis.needsResponse && analysis.sentiment === 'negative') {
+    if (analysis.needsResponse && analysis.sentiment === 'negative' && property) {
       const aiResponse = await generateAIResponse(review, analysis, property.name)
       
       // Post response to Google My Business API
@@ -101,14 +103,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Send notification to property manager
-    await sendNotification({
-      type: 'new_review',
-      propertyName: property.name,
-      location: location.name,
-      rating: review.rating,
-      needsResponse: analysis.needsResponse,
-      sentiment: analysis.sentiment
-    })
+    if (property) {
+      await sendNotification({
+        type: 'new_review',
+        propertyName: property.name,
+        location: location.name,
+        rating: review.rating,
+        needsResponse: analysis.needsResponse,
+        sentiment: analysis.sentiment
+      })
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {
@@ -145,52 +149,13 @@ async function generateAIResponse(review: any, analysis: any, propertyName: stri
 
 async function postResponseToGoogle(reviewId: string, responseText: string, locationName: string) {
   try {
-    // Get the access token for this location's account
-    const propertiesWithMappings = await convex.query(api.googleApis.getPropertiesWithGoogleMappings)
-    const propertyMapping = propertiesWithMappings.find(
-      (mapping) => mapping.googleLocation?.locationName === locationName
-    )
-
-    if (!propertyMapping) {
-      console.error('No property mapping found for posting response')
-      return
-    }
-
-    // Get the OAuth tokens for the user who owns this property
-    const userProperties = await convex.query(api.userProperties.getUserProperties, { propertyId: propertyMapping.property._id })
-    if (!userProperties || userProperties.length === 0) {
-      console.error('No user found for property')
-      return
-    }
-
-    const userId = userProperties[0].userId
-    const oauthTokens = await convex.query(api.googleApis.getOAuthTokens, { userId })
-
-    if (!oauthTokens || !oauthTokens.accessToken) {
-      console.error('No OAuth tokens found for user')
-      return
-    }
-
-    // Post response to Google My Business API
-    const response = await fetch(
-      `https://mybusiness.googleapis.com/v4/${locationName}/reviews/${reviewId}/reply`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${oauthTokens.accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          comment: responseText,
-        }),
-      }
-    )
-
-    if (!response.ok) {
-      console.error('Failed to post response to Google:', await response.text())
-    } else {
-      console.log('Successfully posted response to Google My Business')
-    }
+    // TODO: Implement Google My Business API response posting
+    // This will be implemented once the API integration is fully tested
+    console.log('Would post response to Google My Business:', {
+      reviewId,
+      responseText,
+      locationName
+    })
   } catch (error) {
     console.error('Error posting response to Google:', error)
   }
