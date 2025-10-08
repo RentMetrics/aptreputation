@@ -216,14 +216,14 @@ export default function SignUpPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <SignUp 
+                  <SignUp
                     appearance={{
                       elements: {
                         rootBox: "w-full",
                         card: "shadow-none border-0 p-0",
                       }
                     }}
-                    afterSignUpUrl="/sign-up?step=2"
+                    afterSignUpUrl="/dashboard"
                   />
                 </CardContent>
               </Card>
