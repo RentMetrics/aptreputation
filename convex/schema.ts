@@ -142,4 +142,45 @@ export default defineSchema({
     userAgent: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_created_at", ["createdAt"]),
+
+  // Rating History table - track rating changes over time from baseline
+  ratingHistory: defineTable({
+    propertyId: v.id("properties"),
+    rating: v.number(),
+    totalReviews: v.number(),
+    reputationScore: v.optional(v.number()),
+    baselineRating: v.number(), // Reference to starting rating
+    improvement: v.number(), // Difference from baseline
+    improvementPercent: v.number(), // Percentage improvement
+    recordedAt: v.number(), // timestamp when this rating was recorded
+    createdAt: v.number(),
+  })
+    .index("by_property", ["propertyId"])
+    .index("by_property_and_date", ["propertyId", "recordedAt"]),
+
+  // AI Improvement Strategies table - detailed AI analysis for properties
+  improvementStrategies: defineTable({
+    propertyId: v.id("properties"),
+    summary: v.string(),
+    keyFindings: v.array(v.object({
+      category: v.string(),
+      sentiment: v.string(),
+      frequency: v.string(),
+      impact: v.string(),
+      finding: v.string(),
+      recommendation: v.string(),
+    })),
+    actionPlan: v.array(v.object({
+      priority: v.string(),
+      action: v.string(),
+      expectedImpact: v.string(),
+      effort: v.string(),
+    })),
+    themes: v.array(v.string()),
+    basedOnReviewCount: v.number(),
+    generatedAt: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_property", ["propertyId"])
+    .index("by_generated_at", ["propertyId", "generatedAt"]),
 }); 

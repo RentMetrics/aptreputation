@@ -223,7 +223,7 @@ export default function SignUpPage() {
                         card: "shadow-none border-0 p-0",
                       }
                     }}
-                    afterSignUpUrl="/dashboard"
+                    afterSignUpUrl="/dashboard/portfolio"
                   />
                 </CardContent>
               </Card>

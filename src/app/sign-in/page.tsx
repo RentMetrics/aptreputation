@@ -43,14 +43,14 @@ export default function SignInPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <SignIn 
+              <SignIn
                 appearance={{
                   elements: {
                     rootBox: "w-full",
                     card: "shadow-none border-0 p-0",
                   }
                 }}
-                afterSignInUrl="/dashboard"
+                afterSignInUrl="/dashboard/portfolio"
               />
             </CardContent>
           </Card>

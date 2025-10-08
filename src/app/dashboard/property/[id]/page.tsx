@@ -1,102 +1,170 @@
 "use client"
 
-import React, { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useState } from "react"
+import { useParams, useRouter } from "next/navigation"
+import Image from "next/image"
+import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { 
+import {
   ArrowLeft,
-  Star, 
-  TrendingUp, 
-  MessageSquare, 
-  ThumbsUp,
-  ThumbsDown,
-  Clock,
-  Filter,
-  Search,
-  Send,
-  Edit,
-  Check,
-  X
+  Building,
+  TrendingUp,
+  TrendingDown,
+  Star,
+  AlertCircle,
+  CheckCircle,
+  MessageSquare,
+  Smartphone,
+  Settings,
+  Eye,
+  Calendar,
+  Lightbulb,
+  Target,
+  BarChart3,
+  Users,
+  Wrench,
+  Home,
+  ShieldAlert
 } from "lucide-react"
+import { GoogleIntegrationStatus } from "@/components/google-integration-status"
 
-export default function PropertyDetail({ params }: { params: Promise<{ id: string }> }) {
-  const [propertyId, setPropertyId] = useState<string>("")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedFilter, setSelectedFilter] = useState("all")
-  const [editingResponse, setEditingResponse] = useState<string | null>(null)
-  const [responseText, setResponseText] = useState("")
-  
-  // Handle async params
-  React.useEffect(() => {
-    params.then((resolvedParams) => {
-      setPropertyId(resolvedParams.id)
-    })
-  }, [params])
-  
-  if (!propertyId) {
-    return <div>Loading...</div>
-  }
-  
-  // Mock data - in real implementation this would come from the database
+export default function PropertyDashboard() {
+  const params = useParams()
+  const router = useRouter()
+  const propertyId = params.id
+
+  // Mock data - replace with real data from Convex based on propertyId
   const property = {
     id: propertyId,
     name: "Sunset Apartments",
-    address: "123 Main St, Austin, TX",
-    googleRating: 4.3,
-    totalReviews: 156,
-    aptReputationScore: 82,
-    trend: "up",
-    recentReviews: 8,
-    pendingResponses: 2
+    address: "123 Sunset Blvd, Austin, TX",
+    reputationScore: 84,
+    googleRating: 4.4,
+    baselineRating: 4.2,
+    totalReviews: 171,
+    recentReviews: 12,
+    pendingResponses: 3,
+    nfcCards: 2,
+    signupDate: "2024-07-08",
+    monthsSinceSignup: 3,
+    improvement: "+0.2",
+    improvementPercent: "+4.8%",
+    trending: "up"
   }
 
-  const reviews = [
+  // AI-Generated Improvement Strategies based on review analysis
+  const improvementStrategies = {
+    summary: "Based on analysis of 171 reviews, we've identified key opportunities to improve your property's reputation and increase your rating to 4.7+ stars.",
+    keyFindings: [
+      {
+        category: "Maintenance Response Time",
+        sentiment: "negative",
+        frequency: "high",
+        impact: "High Impact",
+        finding: "28% of reviews mention slow maintenance response times, particularly for AC and plumbing issues.",
+        recommendation: "Implement a 24-hour response guarantee for urgent maintenance requests and communicate response times clearly to residents."
+      },
+      {
+        category: "Staff Friendliness",
+        sentiment: "positive",
+        frequency: "high",
+        impact: "Strength",
+        finding: "45% of positive reviews specifically praise the front desk staff and leasing team's friendliness.",
+        recommendation: "Leverage this strength in marketing materials and ensure staff training maintains this high standard."
+      },
+      {
+        category: "Amenities & Facilities",
+        sentiment: "mixed",
+        frequency: "medium",
+        impact: "Medium Impact",
+        finding: "Pool and gym facilities receive mixed feedback - 18% mention cleanliness issues during peak hours.",
+        recommendation: "Increase cleaning frequency during peak times (6-9 PM) and add visible cleaning schedules in amenity areas."
+      },
+      {
+        category: "Noise Levels",
+        sentiment: "negative",
+        frequency: "medium",
+        impact: "Medium Impact",
+        finding: "15% of reviews mention noise from neighboring units or common areas.",
+        recommendation: "Review soundproofing between units, establish and enforce quiet hours, and provide noise complaints resolution process."
+      },
+      {
+        category: "Value for Money",
+        sentiment: "positive",
+        frequency: "high",
+        impact: "Strength",
+        finding: "52% of reviews mention good value for the location and amenities provided.",
+        recommendation: "Highlight this in marketing and consider slight rent increases for new leases to match market value."
+      }
+    ],
+    actionPlan: [
+      {
+        priority: "Immediate",
+        action: "Implement 24-hour maintenance response guarantee",
+        expectedImpact: "+0.2 stars within 2 months",
+        effort: "Medium"
+      },
+      {
+        priority: "Immediate",
+        action: "Increase amenity cleaning during peak hours",
+        expectedImpact: "+0.1 stars within 1 month",
+        effort: "Low"
+      },
+      {
+        priority: "Short-term",
+        action: "Establish formal quiet hours policy with resident communication",
+        expectedImpact: "+0.1 stars within 3 months",
+        effort: "Low"
+      },
+      {
+        priority: "Ongoing",
+        action: "Continue staff training and recognition programs",
+        expectedImpact: "Maintain current strength",
+        effort: "Low"
+      }
+    ]
+  }
+
+  const recentReviews = [
     {
       id: 1,
-      reviewer: "Sarah Johnson",
+      author: "Sarah M.",
       rating: 5,
-      date: "2024-01-15",
-      text: "Absolutely love living here! The staff is incredibly friendly and responsive. The amenities are top-notch and the location is perfect. Maintenance requests are handled quickly and professionally.",
+      text: "Great apartment complex! The staff is very friendly and maintenance responds quickly.",
+      date: "2 hours ago",
       sentiment: "positive",
-      themes: ["Staff Friendliness", "Amenities", "Maintenance"],
-      needsResponse: false,
-      aiResponse: null
+      themes: ["Staff Friendliness", "Maintenance Response"],
+      needsResponse: false
     },
     {
       id: 2,
-      reviewer: "Mike Chen",
-      rating: 3,
-      date: "2024-01-14",
-      text: "The apartment itself is nice, but the parking situation is terrible. There's never enough parking spaces and I often have to park on the street. Also, the walls are quite thin so you can hear neighbors easily.",
+      author: "Mike R.",
+      rating: 2,
+      text: "The noise from the construction next door is unbearable. Management hasn't addressed this issue.",
+      date: "1 day ago",
       sentiment: "negative",
-      themes: ["Parking", "Noise"],
-      needsResponse: true,
-      aiResponse: "Dear Mike, thank you for your feedback. We sincerely apologize for the parking challenges you've experienced. This is an issue we're actively working to address. We're exploring additional parking solutions and have recently implemented a parking management system to better allocate spaces. Regarding noise concerns, we're in the process of upgrading soundproofing in common areas. Please contact our office directly so we can discuss these issues further and ensure your concerns are fully addressed."
+      themes: ["Noise Levels", "Management Response"],
+      needsResponse: true
     },
     {
       id: 3,
-      reviewer: "Emily Rodriguez",
+      author: "Lisa K.",
       rating: 4,
-      date: "2024-01-13",
-      text: "Great location and the leasing process was smooth. The apartment is clean and well-maintained. Only minor issue is that the gym equipment could use some updates.",
+      text: "Nice amenities and clean facilities. Would recommend to friends.",
+      date: "2 days ago",
       sentiment: "positive",
-      themes: ["Location", "Leasing Process", "Cleanliness", "Amenities"],
-      needsResponse: false,
-      aiResponse: null
-    },
-    {
-      id: 4,
-      reviewer: "David Kim",
-      rating: 2,
-      date: "2024-01-12",
-      text: "Very disappointed with the maintenance service. I reported a leak in my bathroom over a week ago and it still hasn't been fixed. The office staff keeps saying they'll get to it but nothing happens.",
-      sentiment: "negative",
-      themes: ["Maintenance", "Communication"],
-      needsResponse: true,
-      aiResponse: "Dear David, we sincerely apologize for the delay in addressing your bathroom leak. This is not the standard of service we aim to provide. I've escalated this issue to our maintenance supervisor and it will be resolved today. Please accept our apologies for the inconvenience and know that we're reviewing our internal processes to prevent this from happening again. If you need immediate assistance, please call our emergency maintenance line."
+      themes: ["Amenities", "Cleanliness"],
+      needsResponse: false
     }
+  ]
+
+  // Rating progression data
+  const ratingHistory = [
+    { month: "Jul", rating: 4.2, reviews: 159 },
+    { month: "Aug", rating: 4.3, reviews: 163 },
+    { month: "Sep", rating: 4.4, reviews: 171 }
   ]
 
   const getScoreColor = (score: number) => {
@@ -105,276 +173,319 @@ export default function PropertyDetail({ params }: { params: Promise<{ id: strin
     return "text-red-600"
   }
 
-  const getScoreBadgeVariant = (score: number) => {
-    if (score >= 80) return "default"
-    if (score >= 60) return "secondary"
-    return "destructive"
-  }
-
-  const getSentimentBadgeVariant = (sentiment: string) => {
-    if (sentiment === "positive") return "default"
-    if (sentiment === "neutral") return "secondary"
-    return "destructive"
-  }
-
-  const getRatingStars = (rating: number) => {
-    return Array.from({ length: 5 }, (_, i) => (
-      <Star 
-        key={i} 
-        className={`h-4 w-4 ${i < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} 
-      />
-    ))
-  }
-
-  const filteredReviews = reviews.filter(review => {
-    const matchesSearch = review.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         review.reviewer.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesFilter = selectedFilter === "all" || 
-                         (selectedFilter === "needs-response" && review.needsResponse) ||
-                         (selectedFilter === "positive" && review.sentiment === "positive") ||
-                         (selectedFilter === "negative" && review.sentiment === "negative")
-    return matchesSearch && matchesFilter
-  })
-
-  const handleEditResponse = (reviewId: string, currentResponse: string) => {
-    setEditingResponse(reviewId)
-    setResponseText(currentResponse)
-  }
-
-  const handleSaveResponse = () => {
-    // In real implementation, this would save to the database
-    setEditingResponse(null)
-    setResponseText("")
-  }
-
-  const handleSendResponse = (reviewId: string) => {
-    // In real implementation, this would post to Google
-    console.log("Sending response for review:", reviewId)
+  const getImpactColor = (impact: string) => {
+    if (impact === "High Impact" || impact === "Immediate") return "destructive"
+    if (impact === "Medium Impact" || impact === "Short-term") return "secondary"
+    return "default"
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center py-6">
-            <Button variant="ghost" className="mr-4">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{property.name}</h1>
-              <p className="text-gray-600">{property.address}</p>
+      <div className="container mx-auto py-8 px-4">
+        {/* Header */}
+        <div className="mb-8">
+          <Button
+            variant="ghost"
+            onClick={() => router.push('/dashboard/portfolio')}
+            className="mb-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Portfolio
+          </Button>
+
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex items-center space-x-4">
+              <Building className="h-12 w-12 text-blue-600" />
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">{property.name}</h1>
+                <p className="text-gray-600">{property.address}</p>
+              </div>
             </div>
+            <Button>
+              <Settings className="h-4 w-4 mr-2" />
+              Settings
+            </Button>
           </div>
         </div>
-      </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Property Stats */}
+        {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Google Rating</CardTitle>
-              <Star className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{property.googleRating}</div>
-              <p className="text-xs text-muted-foreground">
-                {property.totalReviews} total reviews
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">AptReputation Score</CardTitle>
+              <CardTitle className="text-sm font-medium">Reputation Score</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${getScoreColor(property.aptReputationScore)}`}>
-                {property.aptReputationScore}
+              <div className={`text-3xl font-bold ${getScoreColor(property.reputationScore)}`}>
+                {property.reputationScore}/100
               </div>
-              <Badge variant={getScoreBadgeVariant(property.aptReputationScore)} className="text-xs">
-                {property.trend === 'up' ? 'Improving' : 'Declining'}
-              </Badge>
+              <p className="text-xs text-muted-foreground">
+                +5 points this month
+              </p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Recent Reviews</CardTitle>
+              <CardTitle className="text-sm font-medium">Rating Progress</CardTitle>
+              <Star className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-gray-900">
+                {property.googleRating}
+              </div>
+              <p className={`text-xs font-medium ${
+                property.improvement.startsWith('+') ? 'text-green-600' : 'text-gray-500'
+              }`}>
+                {property.improvement} from baseline ({property.baselineRating})
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Reviews</CardTitle>
               <MessageSquare className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{property.recentReviews}</div>
+              <div className="text-3xl font-bold">{property.totalReviews}</div>
               <p className="text-xs text-muted-foreground">
-                Last 30 days
+                +{property.recentReviews} this month
               </p>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Responses</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Tracking Since</CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{property.pendingResponses}</div>
+              <div className="text-3xl font-bold">{property.monthsSinceSignup}</div>
               <p className="text-xs text-muted-foreground">
-                Need attention
+                months of data
               </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Search and Filters */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search reviews..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button 
-              variant={selectedFilter === "all" ? "default" : "outline"}
-              onClick={() => setSelectedFilter("all")}
-            >
-              All
-            </Button>
-            <Button 
-              variant={selectedFilter === "needs-response" ? "default" : "outline"}
-              onClick={() => setSelectedFilter("needs-response")}
-            >
-              Needs Response
-            </Button>
-            <Button 
-              variant={selectedFilter === "positive" ? "default" : "outline"}
-              onClick={() => setSelectedFilter("positive")}
-            >
-              <ThumbsUp className="h-4 w-4 mr-2" />
-              Positive
-            </Button>
-            <Button 
-              variant={selectedFilter === "negative" ? "default" : "outline"}
-              onClick={() => setSelectedFilter("negative")}
-            >
-              <ThumbsDown className="h-4 w-4 mr-2" />
-              Negative
-            </Button>
-          </div>
-        </div>
-
-        {/* Reviews List */}
-        <div className="space-y-6">
-          {filteredReviews.map((review) => (
-            <Card key={review.id} className={review.needsResponse ? "border-orange-200 bg-orange-50" : ""}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold">{review.reviewer}</h3>
-                      <Badge variant={getSentimentBadgeVariant(review.sentiment)}>
-                        {review.sentiment}
-                      </Badge>
-                      {review.needsResponse && (
-                        <Badge variant="destructive">Needs Response</Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex">
-                        {getRatingStars(review.rating)}
-                      </div>
-                      <span className="text-sm text-gray-500">{review.date}</span>
-                    </div>
-                    <div className="flex gap-2">
-                      {review.themes.map((theme, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {theme}
-                        </Badge>
-                      ))}
+        {/* Rating History Chart */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Rating Performance Over Time</CardTitle>
+            <CardDescription>Baseline: {property.baselineRating} ⭐ (locked at signup on {property.signupDate})</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-end justify-between h-48 gap-4">
+              {ratingHistory.map((data, index) => (
+                <div key={index} className="flex-1 flex flex-col items-center">
+                  <div className="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-lg relative"
+                       style={{ height: `${(data.rating / 5) * 100}%` }}>
+                    <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 font-bold text-lg">
+                      {data.rating}
                     </div>
                   </div>
+                  <div className="mt-2 text-sm font-medium">{data.month}</div>
+                  <div className="text-xs text-gray-500">{data.reviews} reviews</div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-700 mb-4">{review.text}</p>
-                
-                {review.aiResponse && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-semibold text-blue-900">AI-Generated Response</h4>
-                      <div className="flex gap-2">
-                        {editingResponse === review.id.toString() ? (
-                          <>
-                            <Button size="sm" onClick={handleSaveResponse}>
-                              <Check className="h-4 w-4 mr-1" />
-                              Save
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => setEditingResponse(null)}>
-                              <X className="h-4 w-4 mr-1" />
-                              Cancel
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <Button size="sm" variant="outline" onClick={() => handleEditResponse(review.id.toString(), review.aiResponse || "")}>
-                              <Edit className="h-4 w-4 mr-1" />
-                              Edit
-                            </Button>
-                            <Button size="sm" onClick={() => handleSendResponse(review.id.toString())}>
-                              <Send className="h-4 w-4 mr-1" />
-                              Send
-                            </Button>
-                          </>
-                        )}
+              ))}
+            </div>
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-green-600" />
+                <p className="text-sm font-medium text-gray-900">
+                  Your rating has improved by {property.improvement} stars ({property.improvementPercent}) since signing up!
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* AI-Powered Improvement Strategies */}
+        <Card className="mb-8 border-2 border-purple-200">
+          <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-600 rounded-lg">
+                <Lightbulb className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-2xl">AI-Powered Improvement Strategies</CardTitle>
+                <CardDescription className="text-base">{improvementStrategies.summary}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {/* Key Findings */}
+            <div className="mb-8">
+              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                <Target className="h-5 w-5 text-purple-600" />
+                Key Findings from Review Analysis
+              </h3>
+              <div className="space-y-4">
+                {improvementStrategies.keyFindings.map((finding, index) => (
+                  <div key={index} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        {finding.category === "Maintenance Response Time" && <Wrench className="h-5 w-5 text-orange-600" />}
+                        {finding.category === "Staff Friendliness" && <Users className="h-5 w-5 text-green-600" />}
+                        {finding.category === "Amenities & Facilities" && <Home className="h-5 w-5 text-blue-600" />}
+                        {finding.category === "Noise Levels" && <ShieldAlert className="h-5 w-5 text-red-600" />}
+                        {finding.category === "Value for Money" && <BarChart3 className="h-5 w-5 text-purple-600" />}
+                        <h4 className="font-bold text-gray-900">{finding.category}</h4>
+                      </div>
+                      <Badge variant={getImpactColor(finding.impact)}>{finding.impact}</Badge>
+                    </div>
+                    <p className="text-sm text-gray-700 mb-3">{finding.finding}</p>
+                    <div className="bg-green-50 border-l-4 border-green-500 p-3 rounded">
+                      <p className="text-sm font-medium text-green-900">
+                        <strong>Recommendation:</strong> {finding.recommendation}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Plan */}
+            <div>
+              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                Prioritized Action Plan
+              </h3>
+              <div className="space-y-3">
+                {improvementStrategies.actionPlan.map((action, index) => (
+                  <div key={index} className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+                    <Badge variant={getImpactColor(action.priority)} className="mt-1">
+                      {action.priority}
+                    </Badge>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900 mb-1">{action.action}</p>
+                      <div className="flex gap-4 text-sm text-gray-600">
+                        <span>📈 Impact: {action.expectedImpact}</span>
+                        <span>⚡ Effort: {action.effort}</span>
                       </div>
                     </div>
-                    {editingResponse === review.id.toString() ? (
-                      <textarea
-                        value={responseText}
-                        onChange={(e) => setResponseText(e.target.value)}
-                        className="w-full p-3 border border-blue-300 rounded-lg resize-none"
-                        rows={4}
-                      />
-                    ) : (
-                      <p className="text-blue-800">{review.aiResponse}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Reviews */}
+        <Card className="mb-8">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>Recent Reviews</CardTitle>
+                <CardDescription>Latest reviews for {property.name}</CardDescription>
+              </div>
+              <Button variant="outline" size="sm">
+                <Eye className="h-4 w-4 mr-2" />
+                View All
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recentReviews.map((review) => (
+                <div key={review.id} className="flex items-start space-x-4 p-4 border rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <div className="flex items-center">
+                      <Star className="h-4 w-4 text-yellow-400 fill-current mr-1" />
+                      <span className="font-medium">{review.rating}</span>
+                    </div>
+                    <Badge variant={review.sentiment === "positive" ? "default" : "destructive"}>
+                      {review.sentiment}
+                    </Badge>
+                    {review.needsResponse && (
+                      <Badge variant="destructive">Needs Response</Badge>
                     )}
                   </div>
-                )}
-                
-                {review.needsResponse && !review.aiResponse && (
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-orange-900 mb-2">Generate AI Response</h4>
-                    <p className="text-orange-800 mb-3">
-                      This review needs a response. Click below to generate an AI-powered response.
-                    </p>
-                    <Button size="sm">
-                      <Send className="h-4 w-4 mr-2" />
-                      Generate Response
-                    </Button>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium">{review.author}</span>
+                      <span className="text-sm text-gray-500">{review.date}</span>
+                    </div>
+                    <p className="text-gray-700 mb-2">{review.text}</p>
+                    <div className="flex gap-2">
+                      {review.themes.map((theme, i) => (
+                        <Badge key={i} variant="outline" className="text-xs">{theme}</Badge>
+                      ))}
+                    </div>
+                    {review.needsResponse && (
+                      <Button size="sm" className="mt-3">
+                        Generate AI Response
+                      </Button>
+                    )}
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Empty State */}
-        {filteredReviews.length === 0 && (
-          <div className="text-center py-12">
-            <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No reviews found</h3>
-            <p className="text-gray-600">
-              {searchQuery ? "Try adjusting your search terms" : "No reviews match the current filters"}
-            </p>
-          </div>
-        )}
+        {/* Google Integration Status */}
+        <GoogleIntegrationStatus
+          isConnected={true}
+          accountName="Sunset Apartments Management"
+          locationName="Sunset Apartments"
+          lastSync="2 hours ago"
+          onReconnect={() => router.push('/sign-up?step=3')}
+          onDisconnect={() => console.log('Disconnect Google account')}
+        />
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">NFC Cards</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="text-sm text-gray-600 mb-3">
+                <p>{property.nfcCards} cards active</p>
+                <p>Additional cards: $5 each</p>
+              </div>
+              <Button className="w-full" variant="outline">
+                <Smartphone className="h-4 w-4 mr-2" />
+                Manage Cards
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Review Management</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button className="w-full" variant="outline">
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Respond to Reviews
+              </Button>
+              <Button className="w-full" variant="outline">
+                <TrendingUp className="h-4 w-4 mr-2" />
+                View Analytics
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Reports</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button className="w-full" variant="outline">
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Download Report
+              </Button>
+              <Button className="w-full" variant="outline">
+                <Calendar className="h-4 w-4 mr-2" />
+                Schedule Email
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )
-} 
+}
