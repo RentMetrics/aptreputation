@@ -209,56 +209,68 @@ export default function Home() {
       <Navigation />
 
       {/* Hero Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center">
+      <section className="relative py-24 px-4 sm:px-6 lg:px-8 overflow-hidden min-h-[600px] flex items-center">
+        {/* Hero Background Image */}
+        <div className="absolute inset-0 z-0">
+          <Image
+            src="/aptreputation_hero_header.png"
+            alt="Background"
+            fill
+            className="object-cover opacity-30"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/95 to-indigo-100/95"></div>
+        </div>
+
+        <div className="max-w-4xl mx-auto text-center relative z-10 w-full">
           {/* Hero Logo */}
-          <div className="mb-8 flex justify-center">
+          <div className="mb-8 flex justify-center animate-fade-in">
             <Image
               src="/apt-reputation-logo-full-xl.png"
               alt="APT Reputation"
               width={300}
               height={80}
-              className="h-16 w-auto sm:h-20"
+              className="h-20 w-auto sm:h-24 drop-shadow-lg"
               priority
             />
           </div>
-          <h1 className="text-5xl font-bold text-gray-900 mb-6">
+          <h1 className="text-5xl sm:text-6xl font-bold text-gray-900 mb-6 leading-tight">
             Transform Your Property's
-            <span className="text-blue-600"> Online Reputation</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600"> Online Reputation</span>
           </h1>
-          <p className="text-xl text-gray-600 mb-8">
-            AI-powered reputation management for apartment owners and property managers. 
+          <p className="text-xl sm:text-2xl text-gray-700 mb-10 max-w-3xl mx-auto">
+            AI-powered reputation management for apartment owners and property managers.
             Monitor, analyze, and improve your Google reviews automatically.
           </p>
-          
+
           {/* Search Section */}
           <div className="max-w-2xl mx-auto mb-12">
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-2xl font-semibold mb-4">Free Reputation Audit</h2>
-              <p className="text-gray-600 mb-6">
+            <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-gray-100">
+              <h2 className="text-2xl sm:text-3xl font-bold mb-4 text-gray-900">Free Reputation Audit</h2>
+              <p className="text-gray-600 mb-6 text-lg">
                 See how AI can transform your review management. Get instant insights into your property's reputation.
               </p>
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <Input
                   placeholder="Enter property name or address..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                  className="flex-1"
+                  className="flex-1 h-14 text-lg px-4 border-2 focus:border-blue-500"
                 />
-                <Button 
-                  onClick={handleSearch} 
+                <Button
+                  onClick={handleSearch}
                   disabled={isLoading}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-8 py-3 rounded-lg shadow-lg transform transition-all duration-200 hover:scale-105 hover:shadow-xl"
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-8 h-14 rounded-lg shadow-lg transform transition-all duration-200 hover:scale-105 hover:shadow-xl text-lg"
                 >
                   {isLoading ? (
                     <div className="flex items-center gap-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                       Analyzing...
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <Search className="h-5 w-5" />
+                      <Search className="h-6 w-6" />
                       Audit Now
                     </div>
                   )}
@@ -270,53 +282,139 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-white">
+      <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
               Everything You Need to Manage Your Reputation
             </h2>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl sm:text-2xl text-gray-600 max-w-3xl mx-auto">
               From automated review responses to AI-powered insights
             </p>
           </div>
-          
+
           <div className="grid md:grid-cols-3 gap-8">
-            <Card>
-              <CardHeader>
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-                  <Search className="h-6 w-6 text-blue-600" />
+            <Card className="border-2 border-transparent hover:border-blue-500 transition-all duration-300 hover:shadow-xl">
+              <CardHeader className="text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg">
+                  <Search className="h-8 w-8 text-white" />
                 </div>
-                <CardTitle>Review Monitoring</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-2xl mb-3">Review Monitoring</CardTitle>
+                <CardDescription className="text-base text-gray-600">
                   Automatically track all your Google reviews with real-time notifications and sentiment analysis.
                 </CardDescription>
               </CardHeader>
             </Card>
-            
-            <Card>
-              <CardHeader>
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-                  <Zap className="h-6 w-6 text-green-600" />
+
+            <Card className="border-2 border-transparent hover:border-green-500 transition-all duration-300 hover:shadow-xl">
+              <CardHeader className="text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg">
+                  <Zap className="h-8 w-8 text-white" />
                 </div>
-                <CardTitle>AI-Generated Responses</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-2xl mb-3">AI-Generated Responses</CardTitle>
+                <CardDescription className="text-base text-gray-600">
                   Get professional, empathetic response drafts for negative reviews that reference specific issues.
                 </CardDescription>
               </CardHeader>
             </Card>
-            
-            <Card>
-              <CardHeader>
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                  <TrendingUp className="h-6 w-6 text-purple-600" />
+
+            <Card className="border-2 border-transparent hover:border-purple-500 transition-all duration-300 hover:shadow-xl">
+              <CardHeader className="text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg">
+                  <TrendingUp className="h-8 w-8 text-white" />
                 </div>
-                <CardTitle>Performance Insights</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-2xl mb-3">Performance Insights</CardTitle>
+                <CardDescription className="text-base text-gray-600">
                   Weekly and monthly reports with actionable recommendations to improve your reputation score.
                 </CardDescription>
               </CardHeader>
             </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* NFC Card Feature Section */}
+      <section className="py-24 bg-gradient-to-br from-indigo-50 to-blue-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-2 gap-16 items-center">
+            {/* Text Content */}
+            <div className="order-2 md:order-1">
+              <Badge className="mb-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 text-sm font-semibold">Smart Review Collection</Badge>
+              <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+                Make Leaving Reviews
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600"> Effortless</span>
+              </h2>
+              <p className="text-xl text-gray-700 mb-8 leading-relaxed">
+                Our innovative NFC review cards make it incredibly easy for residents to share their positive experiences.
+                Simply tap the card on any smartphone, and they're instantly directed to your property's review page.
+              </p>
+
+              <div className="space-y-5 mb-10">
+                <div className="flex items-start gap-4 bg-white/60 backdrop-blur-sm p-4 rounded-xl">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
+                    <CheckCircle className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 mb-1 text-lg">Instant Access</h3>
+                    <p className="text-gray-600">One tap on any smartphone opens the review page - no app required</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 bg-white/60 backdrop-blur-sm p-4 rounded-xl">
+                  <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
+                    <CheckCircle className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 mb-1 text-lg">Staff Empowerment</h3>
+                    <p className="text-gray-600">Equip your team with cards to request reviews during positive interactions</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 bg-white/60 backdrop-blur-sm p-4 rounded-xl">
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
+                    <CheckCircle className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 mb-1 text-lg">Increase Review Volume</h3>
+                    <p className="text-gray-600">Capture more positive reviews by making the process frictionless</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 bg-white/60 backdrop-blur-sm p-4 rounded-xl">
+                  <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
+                    <CheckCircle className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 mb-1 text-lg">Included in Your Plan</h3>
+                    <p className="text-gray-600">2 NFC cards included with every subscription, additional cards just $5 each</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-6 shadow-lg text-white">
+                <p className="text-base leading-relaxed">
+                  <strong className="text-yellow-300">Pro Tip:</strong> Position your review cards at the front desk,
+                  in the leasing office, or give them to maintenance staff to hand out after completing service requests.
+                  The easier you make it, the more reviews you'll collect!
+                </p>
+              </div>
+            </div>
+
+            {/* Image */}
+            <div className="order-1 md:order-2">
+              <div className="relative">
+                <div className="absolute -inset-6 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 rounded-3xl opacity-30 blur-2xl animate-pulse"></div>
+                <div className="relative bg-white p-4 rounded-3xl shadow-2xl">
+                  <Image
+                    src="/aptreputation_card_image.png"
+                    alt="NFC Review Card"
+                    width={600}
+                    height={400}
+                    className="relative rounded-2xl w-full h-auto"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
