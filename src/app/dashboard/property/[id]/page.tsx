@@ -26,7 +26,8 @@ import {
   Users,
   Wrench,
   Home,
-  ShieldAlert
+  ShieldAlert,
+  MapPin
 } from "lucide-react"
 import { GoogleIntegrationStatus } from "@/components/google-integration-status"
 
@@ -160,11 +161,20 @@ export default function PropertyDashboard() {
     }
   ]
 
-  // Rating progression data
+  // Rating progression data - from signup to current
   const ratingHistory = [
-    { month: "Jul", rating: 4.2, reviews: 159 },
-    { month: "Aug", rating: 4.3, reviews: 163 },
-    { month: "Sep", rating: 4.4, reviews: 171 }
+    { month: "Jul 8", date: "2024-07-08", rating: 4.2, reviews: 159, isBaseline: true },
+    { month: "Jul 15", date: "2024-07-15", rating: 4.2, reviews: 160, isBaseline: false },
+    { month: "Jul 22", date: "2024-07-22", rating: 4.2, reviews: 161, isBaseline: false },
+    { month: "Aug 1", date: "2024-08-01", rating: 4.25, reviews: 162, isBaseline: false },
+    { month: "Aug 8", date: "2024-08-08", rating: 4.3, reviews: 163, isBaseline: false },
+    { month: "Aug 15", date: "2024-08-15", rating: 4.3, reviews: 165, isBaseline: false },
+    { month: "Aug 22", date: "2024-08-22", rating: 4.3, reviews: 167, isBaseline: false },
+    { month: "Sep 1", date: "2024-09-01", rating: 4.35, reviews: 168, isBaseline: false },
+    { month: "Sep 8", date: "2024-09-08", rating: 4.4, reviews: 169, isBaseline: false },
+    { month: "Sep 15", date: "2024-09-15", rating: 4.4, reviews: 170, isBaseline: false },
+    { month: "Sep 22", date: "2024-09-22", rating: 4.4, reviews: 171, isBaseline: false },
+    { month: "Oct 1", date: "2024-10-01", rating: 4.4, reviews: 171, isBaseline: false }
   ]
 
   const getScoreColor = (score: number) => {
@@ -180,28 +190,35 @@ export default function PropertyDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
       <div className="container mx-auto py-8 px-4">
         {/* Header */}
         <div className="mb-8">
           <Button
             variant="ghost"
             onClick={() => router.push('/dashboard/portfolio')}
-            className="mb-4"
+            className="mb-4 hover:bg-blue-100 transition-colors"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Portfolio
           </Button>
 
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-blue-100">
             <div className="flex items-center space-x-4">
-              <Building className="h-12 w-12 text-blue-600" />
+              <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg">
+                <Building className="h-10 w-10 text-white" />
+              </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">{property.name}</h1>
-                <p className="text-gray-600">{property.address}</p>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                  {property.name}
+                </h1>
+                <p className="text-gray-600 flex items-center gap-2 mt-1">
+                  <MapPin className="h-4 w-4" />
+                  {property.address}
+                </p>
               </div>
             </div>
-            <Button>
+            <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg">
               <Settings className="h-4 w-4 mr-2" />
               Settings
             </Button>
@@ -210,92 +227,230 @@ export default function PropertyDashboard() {
 
         {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
+          <Card className="border-2 border-green-100 bg-gradient-to-br from-white to-green-50 hover:shadow-xl transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Reputation Score</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-gray-700">Reputation Score</CardTitle>
+              <div className="p-2 bg-green-100 rounded-lg">
+                <TrendingUp className="h-4 w-4 text-green-600" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className={`text-3xl font-bold ${getScoreColor(property.reputationScore)}`}>
-                {property.reputationScore}/100
+              <div className={`text-4xl font-bold ${getScoreColor(property.reputationScore)}`}>
+                {property.reputationScore}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-green-600 font-medium mt-1">
                 +5 points this month
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-2 border-yellow-100 bg-gradient-to-br from-white to-yellow-50 hover:shadow-xl transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Rating Progress</CardTitle>
-              <Star className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-gray-700">Rating Progress</CardTitle>
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <Star className="h-4 w-4 text-yellow-600" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gray-900">
-                {property.googleRating}
+              <div className="text-4xl font-bold text-gray-900">
+                {property.googleRating} ⭐
               </div>
-              <p className={`text-xs font-medium ${
+              <p className={`text-sm font-medium mt-1 ${
                 property.improvement.startsWith('+') ? 'text-green-600' : 'text-gray-500'
               }`}>
-                {property.improvement} from baseline ({property.baselineRating})
+                {property.improvement} from {property.baselineRating}
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-2 border-blue-100 bg-gradient-to-br from-white to-blue-50 hover:shadow-xl transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Reviews</CardTitle>
-              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-gray-700">Total Reviews</CardTitle>
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <MessageSquare className="h-4 w-4 text-blue-600" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{property.totalReviews}</div>
-              <p className="text-xs text-muted-foreground">
+              <div className="text-4xl font-bold text-gray-900">{property.totalReviews}</div>
+              <p className="text-sm text-blue-600 font-medium mt-1">
                 +{property.recentReviews} this month
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-2 border-purple-100 bg-gradient-to-br from-white to-purple-50 hover:shadow-xl transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Tracking Since</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-gray-700">Tracking Since</CardTitle>
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Calendar className="h-4 w-4 text-purple-600" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{property.monthsSinceSignup}</div>
-              <p className="text-xs text-muted-foreground">
+              <div className="text-4xl font-bold text-gray-900">{property.monthsSinceSignup}</div>
+              <p className="text-sm text-purple-600 font-medium mt-1">
                 months of data
               </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Rating History Chart */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Rating Performance Over Time</CardTitle>
-            <CardDescription>Baseline: {property.baselineRating} ⭐ (locked at signup on {property.signupDate})</CardDescription>
+        {/* Rating History Graph - Line Chart */}
+        <Card className="mb-8 border-2 border-blue-100">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-2xl">Rating Performance Over Time</CardTitle>
+                <CardDescription className="text-base mt-1">
+                  Tracking from signup ({property.signupDate}) to present • Baseline: {property.baselineRating} ⭐
+                </CardDescription>
+              </div>
+              <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 text-lg">
+                +{property.improvement} ⭐
+              </Badge>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-end justify-between h-48 gap-4">
-              {ratingHistory.map((data, index) => (
-                <div key={index} className="flex-1 flex flex-col items-center">
-                  <div className="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-lg relative"
-                       style={{ height: `${(data.rating / 5) * 100}%` }}>
-                    <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 font-bold text-lg">
-                      {data.rating}
+          <CardContent className="pt-8">
+            {/* Line Graph */}
+            <div className="relative h-80 mb-8">
+              {/* Y-axis labels */}
+              <div className="absolute left-0 top-0 bottom-0 w-12 flex flex-col justify-between text-sm text-gray-600 font-medium">
+                <span>5.0</span>
+                <span>4.5</span>
+                <span>4.0</span>
+                <span>3.5</span>
+                <span>3.0</span>
+              </div>
+
+              {/* Graph area */}
+              <div className="ml-16 relative h-full border-l-2 border-b-2 border-gray-300">
+                {/* Horizontal grid lines */}
+                <div className="absolute inset-0">
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <div
+                      key={i}
+                      className="absolute w-full border-t border-gray-200"
+                      style={{ top: `${i * 25}%` }}
+                    />
+                  ))}
+                </div>
+
+                {/* Baseline reference line */}
+                <div
+                  className="absolute w-full border-t-2 border-dashed border-orange-400"
+                  style={{ bottom: `${(property.baselineRating / 5) * 100}%` }}
+                >
+                  <span className="absolute -left-16 -top-3 text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                    Baseline
+                  </span>
+                </div>
+
+                {/* Line path with gradient */}
+                <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+                  {/* Gradient fill under line */}
+                  <defs>
+                    <linearGradient id="ratingGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stopColor="rgb(59, 130, 246)" stopOpacity="0.3" />
+                      <stop offset="100%" stopColor="rgb(59, 130, 246)" stopOpacity="0.05" />
+                    </linearGradient>
+                  </defs>
+
+                  {/* Area fill */}
+                  <path
+                    d={`M 0,${100 - (ratingHistory[0].rating / 5) * 100} ${ratingHistory.map((point, i) =>
+                      `L ${(i / (ratingHistory.length - 1)) * 100},${100 - (point.rating / 5) * 100}`
+                    ).join(' ')} L 100,100 L 0,100 Z`}
+                    fill="url(#ratingGradient)"
+                    vectorEffect="non-scaling-stroke"
+                  />
+
+                  {/* Line */}
+                  <path
+                    d={`M 0,${100 - (ratingHistory[0].rating / 5) * 100} ${ratingHistory.map((point, i) =>
+                      `L ${(i / (ratingHistory.length - 1)) * 100},${100 - (point.rating / 5) * 100}`
+                    ).join(' ')}`}
+                    fill="none"
+                    stroke="rgb(59, 130, 246)"
+                    strokeWidth="3"
+                    vectorEffect="non-scaling-stroke"
+                    className="drop-shadow-lg"
+                  />
+                </svg>
+
+                {/* Data points */}
+                {ratingHistory.map((point, index) => (
+                  <div
+                    key={index}
+                    className="absolute group"
+                    style={{
+                      left: `${(index / (ratingHistory.length - 1)) * 100}%`,
+                      bottom: `${(point.rating / 5) * 100}%`,
+                      transform: 'translate(-50%, 50%)'
+                    }}
+                  >
+                    <div className={`w-3 h-3 rounded-full ${
+                      point.isBaseline
+                        ? 'bg-orange-500 ring-4 ring-orange-200'
+                        : 'bg-blue-500 ring-4 ring-blue-200'
+                    } transition-all group-hover:scale-150`} />
+
+                    {/* Tooltip on hover */}
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white px-3 py-2 rounded-lg shadow-xl whitespace-nowrap z-10">
+                      <div className="text-sm font-bold">{point.rating} ⭐</div>
+                      <div className="text-xs">{point.month}</div>
+                      <div className="text-xs text-gray-300">{point.reviews} reviews</div>
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
                     </div>
                   </div>
-                  <div className="mt-2 text-sm font-medium">{data.month}</div>
-                  <div className="text-xs text-gray-500">{data.reviews} reviews</div>
-                </div>
-              ))}
+                ))}
+              </div>
+
+              {/* X-axis labels */}
+              <div className="ml-16 mt-4 flex justify-between text-xs text-gray-600 font-medium">
+                {ratingHistory.filter((_, i) => i % 3 === 0).map((point, index) => (
+                  <span key={index}>{point.month}</span>
+                ))}
+              </div>
             </div>
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-green-600" />
-                <p className="text-sm font-medium text-gray-900">
-                  Your rating has improved by {property.improvement} stars ({property.improvementPercent}) since signing up!
-                </p>
+
+            {/* Stats Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-500 rounded-lg">
+                    <TrendingUp className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-600 font-medium">Total Improvement</div>
+                    <div className="text-2xl font-bold text-green-700">{property.improvement} stars</div>
+                    <div className="text-xs text-green-600">{property.improvementPercent} increase</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-500 rounded-lg">
+                    <Calendar className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-600 font-medium">Tracking Duration</div>
+                    <div className="text-2xl font-bold text-blue-700">{property.monthsSinceSignup} months</div>
+                    <div className="text-xs text-blue-600">Since {property.signupDate}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-4 rounded-xl border border-purple-200">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-500 rounded-lg">
+                    <MessageSquare className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-600 font-medium">Review Growth</div>
+                    <div className="text-2xl font-bold text-purple-700">+{property.totalReviews - ratingHistory[0].reviews}</div>
+                    <div className="text-xs text-purple-600">New reviews collected</div>
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>
