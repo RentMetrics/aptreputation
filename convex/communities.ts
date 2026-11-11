@@ -1,7 +1,7 @@
 import { action, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { ConvexError, v } from "convex/values";
-import { requireActive, requireCommunity, requireManager, requireUser } from "./lib/auth";
+import { requireActive, requireCommunity, requireManager, requireResponder, requireUser } from "./lib/auth";
 import { placeDetails, searchPlaces, suggestPlaces, PlaceHit, PlaceSuggestion, writeReviewUrl } from "./lib/google";
 import { Id } from "./_generated/dataModel";
 
@@ -59,6 +59,12 @@ export const get = query({
 export const access = internalQuery({
   args: { communityId: v.id("communities") },
   handler: async (ctx, { communityId }) => await requireCommunity(ctx, communityId),
+});
+
+/** Same, for actions a viewer may not start. */
+export const actingAccess = internalQuery({
+  args: { communityId: v.id("communities") },
+  handler: async (ctx, { communityId }) => await requireResponder(ctx, communityId),
 });
 
 export const byId = internalQuery({

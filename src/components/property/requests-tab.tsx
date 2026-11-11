@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { QrDialog } from "@/components/qr-dialog"
+import { useCanAct } from "@/components/property/access"
 import { errorMessage, tapUrl, timeAgo } from "@/lib/format"
 
 function CopyButton({ text }: { text: string }) {
@@ -29,6 +30,7 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export function RequestsTab({ communityId }: { communityId: Id<"communities"> }) {
+  const canAct = useCanAct()
   const data = useQuery(api.tags.listForCommunity, { communityId })
   const staff = useQuery(api.staff.list, { communityId })
   const addCard = useMutation(api.tags.addCard)
@@ -73,7 +75,8 @@ export function RequestsTab({ communityId }: { communityId: Id<"communities"> })
   if (!data) return <p className="text-slate-500">Loading…</p>
 
   return (
-    <div className="space-y-6">
+    // A disabled fieldset turns off every control inside it for view-only people.
+    <fieldset disabled={!canAct} className="space-y-6 min-w-0 border-0 p-0 m-0">
       <section className="bg-blue-50 border border-blue-200 rounded-xl p-5 text-sm text-blue-950">
         <h2 className="font-semibold text-base mb-1">How review cards work</h2>
         <p>
@@ -226,6 +229,6 @@ export function RequestsTab({ communityId }: { communityId: Id<"communities"> })
 
       {error && <p className="text-sm text-red-700" role="alert">{error}</p>}
       {notice && <p className="text-sm text-emerald-800" role="status">{notice}</p>}
-    </div>
+    </fieldset>
   )
 }

@@ -1,5 +1,6 @@
 "use client"
 
+import { useCanAct } from "@/components/property/access"
 import { useState } from "react"
 import { useAction, useQuery } from "convex/react"
 import { RefreshCw } from "lucide-react"
@@ -15,6 +16,7 @@ const PRIORITY = {
 } as const
 
 export function InsightsTab({ communityId }: { communityId: Id<"communities"> }) {
+  const canAct = useCanAct()
   const data = useQuery(api.reviews.insightsLatest, { communityId })
   const generate = useAction(api.ai.generateInsights)
   const [busy, setBusy] = useState(false)
@@ -47,10 +49,10 @@ export function InsightsTab({ communityId }: { communityId: Id<"communities"> })
                 : `${data.analyzed} of ${data.loaded} loaded reviews analyzed`}
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={run} disabled={busy}>
+          {canAct && <Button variant="outline" size="sm" onClick={run} disabled={busy}>
             <RefreshCw className={`h-4 w-4 mr-1.5 ${busy ? "animate-spin" : ""}`} />
             {busy ? "Reading reviews…" : insight ? "Refresh" : "Generate insights"}
-          </Button>
+          </Button>}
         </div>
         {error && <p className="text-sm text-red-700 mt-3" role="alert">{error}</p>}
         {insight ? (

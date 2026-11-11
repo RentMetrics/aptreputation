@@ -8,6 +8,7 @@ import { api } from "@/convex/_generated/api"
 import { Id } from "@/convex/_generated/dataModel"
 import { Button } from "@/components/ui/button"
 import { Stars } from "@/components/stars"
+import { useCanAct } from "@/components/property/access"
 import { errorMessage, formatDate } from "@/lib/format"
 
 type Filter = "needs" | "urgent" | "negative" | "all"
@@ -85,6 +86,7 @@ function ReviewCard({ review, staff, linked, placeId }: { review: Review; staff:
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const canAct = useCanAct()
 
   const canPost = linked && review.source === "business"
 
@@ -136,7 +138,9 @@ function ReviewCard({ review, staff, linked, placeId }: { review: Review; staff:
       {review.mentions.map((m, i) =>
         m.status === "rejected" ? null : (
           <div key={i} className="mt-3 flex flex-wrap items-center gap-2 text-sm bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-            {m.status === "confirmed" ? (
+            {m.status !== "confirmed" && !canAct ? (
+              <span className="text-slate-800">Mentions &ldquo;{m.name}&rdquo; ({m.sentiment}), not yet confirmed.</span>
+            ) : m.status === "confirmed" ? (
               <span className="text-slate-800"><Check className="inline h-4 w-4 text-emerald-700 mr-1" />Names <strong>{m.staffName ?? m.name}</strong> ({m.sentiment})</span>
             ) : (
               <>
@@ -175,9 +179,14 @@ function ReviewCard({ review, staff, linked, placeId }: { review: Review; staff:
           <div className="bg-slate-50 rounded-lg p-3">
             <p className="text-xs font-semibold text-slate-600 mb-1">
               Your reply{review.replyAt ? ` · ${formatDate(review.replyAt)}` : ""}
+              {review.replyByName ? ` · posted by ${review.replyByName}` : ""}
             </p>
             <p className="whitespace-pre-line text-slate-800 text-sm">{review.replyText}</p>
           </div>
+        ) : !canAct ? (
+          <p className="text-sm text-slate-500">
+            No reply yet.{review.draftReply ? " A draft is in progress." : ""}
+          </p>
         ) : (
           <>
             <label className="sr-only" htmlFor={`reply-${review._id}`}>Reply to {review.reviewerName}</label>

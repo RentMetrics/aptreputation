@@ -324,7 +324,7 @@ export const syncAll = internalAction({
 export const postReply = action({
   args: { reviewId: v.id("reviews"), text: v.string() },
   handler: async (ctx, { reviewId, text }): Promise<null> => {
-    const { review, owner, community } = await ctx.runQuery(internal.reviews.forAction, { reviewId });
+    const { review, owner, community, user } = await ctx.runQuery(internal.reviews.forAction, { reviewId });
     requireActive(owner);
     const comment = text.trim();
     if (!comment) throw new ConvexError("Reply text is empty.");
@@ -342,7 +342,7 @@ export const postReply = action({
       },
     );
     if (!res.ok) throw new ConvexError(await googleError(res));
-    await ctx.runMutation(internal.reviews.setReply, { reviewId, text: comment });
+    await ctx.runMutation(internal.reviews.setReply, { reviewId, text: comment, userId: user._id });
     return null;
   },
 });

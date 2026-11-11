@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
-import { requireAdmin, requireCommunity, requireUser, randomCode } from "./lib/auth";
+import { requireAdmin, requireCommunity, requireResponder, requireUser, randomCode } from "./lib/auth";
 import { writeReviewUrl } from "./lib/google";
 import { Id } from "./_generated/dataModel";
 import { MutationCtx } from "./_generated/server";
@@ -23,7 +23,10 @@ async function newCode(ctx: MutationCtx) {
 async function requireTag(ctx: MutationCtx, tagId: Id<"tags">) {
   const user = await requireUser(ctx);
   const tag = await ctx.db.get(tagId);
-  if (!tag || (tag.ownerId !== user._id && user.role !== "admin")) throw new ConvexError("Card not found.");
+  if (!tag) throw new ConvexError("Card not found.");
+  // On a property: anyone who can act there. Not placed yet: whoever claimed it.
+  if (tag.communityId) await requireResponder(ctx, tag.communityId);
+  else if (tag.ownerId !== user._id && user.role !== "admin") throw new ConvexError("Card not found.");
   return { tag, user };
 }
 
@@ -63,7 +66,7 @@ export const listForCommunity = query({
 export const createLink = mutation({
   args: { communityId: v.id("communities"), label: v.string(), staffId: v.optional(v.id("staff")) },
   handler: async (ctx, { communityId, label, staffId }) => {
-    const { user } = await requireCommunity(ctx, communityId);
+    const { user } = await requireResponder(ctx, communityId);
     await checkStaff(ctx, communityId, staffId);
     return await ctx.db.insert("tags", {
       code: await newCode(ctx),
@@ -92,7 +95,7 @@ export const addCard = mutation({
     staffId: v.optional(v.id("staff")),
   },
   handler: async (ctx, { communityId, code, serial, label, staffId }) => {
-    const { user } = await requireCommunity(ctx, communityId);
+    const { user } = await requireResponder(ctx, communityId);
     await checkStaff(ctx, communityId, staffId);
     const cleanCode = code?.trim().toLowerCase().replace(/^.*\/t\//, "");
     const cleanSerial = serial?.trim() ? normalizeSerial(serial) : undefined;

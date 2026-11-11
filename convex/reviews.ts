@@ -1,6 +1,6 @@
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
-import { requireCommunity, requireUser } from "./lib/auth";
+import { requireCommunity, requireResponder, requireUser } from "./lib/auth";
 import { internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
 import { MutationCtx, QueryCtx } from "./_generated/server";
@@ -17,10 +17,11 @@ const incoming = v.object({
   replyAt: v.optional(v.number()),
 });
 
+/** Loads a review for someone allowed to act on it (reply, draft, confirm mentions). */
 async function requireReview(ctx: QueryCtx | MutationCtx, reviewId: Id<"reviews">) {
   const review = await ctx.db.get(reviewId);
   if (!review) throw new ConvexError("Review not found.");
-  const access = await requireCommunity(ctx, review.communityId);
+  const access = await requireResponder(ctx, review.communityId);
   return { review, ...access };
 }
 
@@ -38,8 +39,13 @@ export const list = query({
       .withIndex("by_community", (q) => q.eq("communityId", communityId))
       .collect();
     const names = new Map(staff.map((s) => [s._id, s.name]));
+    const authors = new Map<string, string>();
+    for (const r of reviews) {
+      if (r.replyBy && !authors.has(r.replyBy)) authors.set(r.replyBy, (await ctx.db.get(r.replyBy))?.name ?? "A former team member");
+    }
     return reviews.map((r) => ({
       ...r,
+      replyByName: r.replyBy ? authors.get(r.replyBy) : undefined,
       sinceJoining: r.reviewDate >= community.createdAt,
       mentions: (r.mentions ?? []).map((m) => ({
         ...m,
@@ -53,8 +59,8 @@ export const list = query({
 export const saveDraft = mutation({
   args: { reviewId: v.id("reviews"), text: v.string() },
   handler: async (ctx, { reviewId, text }) => {
-    await requireReview(ctx, reviewId);
-    await ctx.db.patch(reviewId, { draftReply: text, draftAt: Date.now() });
+    const { user } = await requireReview(ctx, reviewId);
+    await ctx.db.patch(reviewId, { draftReply: text, draftAt: Date.now(), draftBy: user._id });
   },
 });
 
@@ -62,9 +68,9 @@ export const saveDraft = mutation({
 export const markReplied = mutation({
   args: { reviewId: v.id("reviews"), text: v.string() },
   handler: async (ctx, { reviewId, text }) => {
-    await requireReview(ctx, reviewId);
+    const { user } = await requireReview(ctx, reviewId);
     if (!text.trim()) throw new ConvexError("Reply text is empty.");
-    await ctx.db.patch(reviewId, { replyText: text.trim(), replyAt: Date.now(), draftReply: undefined });
+    await ctx.db.patch(reviewId, { replyText: text.trim(), replyAt: Date.now(), replyBy: user._id, draftReply: undefined });
   },
 });
 
@@ -100,9 +106,9 @@ export const forAction = internalQuery({
 });
 
 export const setReply = internalMutation({
-  args: { reviewId: v.id("reviews"), text: v.string() },
-  handler: async (ctx, { reviewId, text }) => {
-    await ctx.db.patch(reviewId, { replyText: text, replyAt: Date.now(), draftReply: undefined });
+  args: { reviewId: v.id("reviews"), text: v.string(), userId: v.id("users") },
+  handler: async (ctx, { reviewId, text, userId }) => {
+    await ctx.db.patch(reviewId, { replyText: text, replyAt: Date.now(), replyBy: userId, draftReply: undefined });
   },
 });
 

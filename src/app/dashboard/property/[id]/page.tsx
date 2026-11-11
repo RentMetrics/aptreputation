@@ -14,6 +14,7 @@ import { ProgressTab } from "@/components/property/progress-tab"
 import { RequestsTab } from "@/components/property/requests-tab"
 import { TeamTab } from "@/components/property/team-tab"
 import { SettingsTab } from "@/components/property/settings-tab"
+import { CanActProvider } from "@/components/property/access"
 import { formatDate } from "@/lib/format"
 
 const TABS = [
@@ -44,8 +45,18 @@ export default function PropertyPage() {
       ? community.totalReviews - community.baselineReviews
       : null
 
+  const canAct = community.role !== "viewer"
+  const canManage = community.role === "owner" || community.role === "manager"
+
   return (
+    <CanActProvider value={canAct}>
     <div>
+      {!canAct && (
+        <p className="mb-4 rounded-lg border border-line bg-white px-4 py-2.5 text-sm text-muted" role="note">
+          You have view-only access to this property. You can read everything and get alerts; replying and changes are
+          for the owner, managers and team members.
+        </p>
+      )}
       <Link href="/dashboard" className="inline-flex items-center text-sm text-slate-600 hover:text-slate-900 mb-4">
         <ArrowLeft className="h-4 w-4 mr-1" />All properties
       </Link>
@@ -93,7 +104,8 @@ export default function PropertyPage() {
       {tab === "insights" && <InsightsTab communityId={communityId} />}
       {tab === "requests" && <RequestsTab communityId={communityId} />}
       {tab === "team" && <TeamTab communityId={communityId} />}
-      {tab === "settings" && <SettingsTab community={community} canManage={community.role !== "responder"} />}
+      {tab === "settings" && <SettingsTab community={community} canManage={canManage} />}
     </div>
+    </CanActProvider>
   )
 }

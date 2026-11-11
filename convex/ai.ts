@@ -191,7 +191,7 @@ export const refreshInsights = internalAction({
 export const generateInsights = action({
   args: { communityId: v.id("communities") },
   handler: async (ctx, { communityId }): Promise<null> => {
-    const { owner } = await ctx.runQuery(internal.communities.access, { communityId });
+    const { owner } = await ctx.runQuery(internal.communities.actingAccess, { communityId });
     requireActive(owner);
     const made = await buildInsights(ctx, communityId);
     if (!made) throw new ConvexError("At least 3 written reviews are needed to generate insights.");

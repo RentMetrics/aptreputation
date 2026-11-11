@@ -1,5 +1,6 @@
 "use client"
 
+import { useCanAct } from "@/components/property/access"
 import { useState } from "react"
 import Link from "next/link"
 import { useMutation, useQuery } from "convex/react"
@@ -14,6 +15,7 @@ import { errorMessage, ROLE_LABEL } from "@/lib/format"
 type Role = "manager" | "leasing" | "maintenance" | "other"
 
 export function TeamTab({ communityId }: { communityId: Id<"communities"> }) {
+  const canAct = useCanAct()
   const staff = useQuery(api.staff.list, { communityId })
   const create = useMutation(api.staff.create)
   const [name, setName] = useState("")
@@ -69,7 +71,7 @@ export function TeamTab({ communityId }: { communityId: Id<"communities"> }) {
         ))}
       </section>
 
-      <section className="bg-white border border-slate-200 rounded-xl p-5 h-fit">
+      {canAct && <section className="bg-white border border-slate-200 rounded-xl p-5 h-fit">
         <h2 className="text-lg font-semibold mb-3 flex items-center gap-2"><UserPlus className="h-5 w-5" />Add a team member</h2>
         <form onSubmit={submit} className="space-y-3">
           <div>
@@ -97,7 +99,7 @@ export function TeamTab({ communityId }: { communityId: Id<"communities"> }) {
           {error && <p className="text-sm text-red-700" role="alert">{error}</p>}
           <Button type="submit">Add</Button>
         </form>
-      </section>
+      </section>}
     </div>
   )
 }

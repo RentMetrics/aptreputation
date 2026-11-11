@@ -11,9 +11,9 @@ import { Label } from "@/components/ui/label"
 import { errorMessage } from "@/lib/format"
 
 type Notify = "all" | "negative" | "none"
-type Role = "manager" | "responder"
+type Role = "manager" | "responder" | "viewer"
 
-const ROLE_TEXT = { owner: "Owner", manager: "Manager", responder: "Team member" } as const
+const ROLE_TEXT = { owner: "Owner", manager: "Manager", responder: "Team member", viewer: "Viewer" } as const
 
 /** Who can work on this property, and who is emailed when a review arrives. */
 export function PeopleSection({ communityId }: { communityId: Id<"communities"> }) {
@@ -76,6 +76,7 @@ export function PeopleSection({ communityId }: { communityId: Id<"communities"> 
               >
                 <option value="manager">Manager</option>
                 <option value="responder">Team member</option>
+                <option value="viewer">Viewer</option>
               </select>
             )}
             <select
@@ -118,13 +119,16 @@ export function PeopleSection({ communityId }: { communityId: Id<"communities"> 
             <select id="invite-role" className="block border border-slate-300 rounded-md px-3 py-2 text-sm bg-white h-9" value={role} onChange={(e) => setRole(e.target.value as Role)}>
               <option value="responder">Team member</option>
               <option value="manager">Manager</option>
+              <option value="viewer">Viewer</option>
             </select>
           </div>
           <Button type="submit"><UserPlus className="h-4 w-4 mr-1.5" />Add</Button>
         </form>
       )}
       <p className="text-xs text-slate-500 mt-3">
-        Managers can also add people, connect Google, and remove the property. Billing stays with the owner.
+        Team members reply to reviews and manage cards and staff profiles. Managers can also add people, connect
+        Google, and remove the property. Viewers can read everything and get alerts but cannot reply or change
+        anything. Billing stays with the owner.
       </p>
 
       <div className="mt-4 pt-4 border-t flex flex-wrap items-center gap-3">

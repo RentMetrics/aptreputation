@@ -31,7 +31,7 @@ export type Access = {
   community: Doc<"communities">;
   /** The account that pays for the property; its trial/subscription gates features. */
   owner: Doc<"users">;
-  role: "owner" | "manager" | "responder";
+  role: "owner" | "manager" | "responder" | "viewer";
 };
 
 /** The signed-in user must own the property or be on its team (admins can open any). */
@@ -58,7 +58,18 @@ export async function requireCommunity(
 /** Owners and managers only: people, Google connection, removing the property. */
 export async function requireManager(ctx: QueryCtx | MutationCtx, communityId: Id<"communities">): Promise<Access> {
   const access = await requireCommunity(ctx, communityId);
-  if (access.role === "responder") throw new ConvexError("Only the owner or a manager can change this.");
+  if (!canManage(access.role)) throw new ConvexError("Only the owner or a manager can change this.");
+  return access;
+}
+
+export function canManage(role: Access["role"]) {
+  return role === "owner" || role === "manager";
+}
+
+/** Anyone but a viewer: replying, drafting, cards, links and staff profiles. */
+export async function requireResponder(ctx: QueryCtx | MutationCtx, communityId: Id<"communities">): Promise<Access> {
+  const access = await requireCommunity(ctx, communityId);
+  if (access.role === "viewer") throw new ConvexError("You have view-only access to this property. Ask the owner or a manager to change your role.");
   return access;
 }
 

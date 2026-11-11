@@ -9,7 +9,8 @@ export const staffRole = v.union(
 );
 
 export const notifyPref = v.union(v.literal("all"), v.literal("negative"), v.literal("none"));
-export const memberRole = v.union(v.literal("manager"), v.literal("responder"));
+// manager: everything but billing. responder: reply, cards, staff. viewer: read-only.
+export const memberRole = v.union(v.literal("manager"), v.literal("responder"), v.literal("viewer"));
 
 export const prospectStatus = v.union(
   v.literal("new"),
@@ -141,8 +142,11 @@ export default defineSchema({
     // Reply workflow
     replyText: v.optional(v.string()), // reply live on Google
     replyAt: v.optional(v.number()),
+    // Who posted the reply through AptReputation (Google only shows the business).
+    replyBy: v.optional(v.id("users")),
     draftReply: v.optional(v.string()),
     draftAt: v.optional(v.number()),
+    draftBy: v.optional(v.id("users")),
     // Staff whose card/link was tapped shortly before this review appeared
     assistedStaffId: v.optional(v.id("staff")),
     // New-review email: pending until sent (or skipped when email is not set up).

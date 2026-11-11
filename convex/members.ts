@@ -1,7 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { ConvexError, v } from "convex/values";
-import { requireCommunity, requireManager } from "./lib/auth";
+import { canManage as isManager, requireCommunity, requireManager } from "./lib/auth";
 import { memberRole, notifyPref } from "./schema";
 
 /** Everyone who can work on a property, and how each is alerted. */
@@ -16,7 +16,7 @@ export const list = query({
         memberId: null as null | (typeof members)[number]["_id"],
         name: owner.name,
         email: owner.email,
-        role: "owner" as "owner" | "manager" | "responder",
+        role: "owner" as "owner" | "manager" | "responder" | "viewer",
         notify: community.ownerNotify ?? ("all" as const),
         pending: false,
         isYou: owner._id === user._id,
@@ -29,7 +29,7 @@ export const list = query({
             memberId: m._id,
             name: u?.name ?? m.email,
             email: m.email,
-            role: m.role as "owner" | "manager" | "responder",
+            role: m.role as "owner" | "manager" | "responder" | "viewer",
             notify: m.notify,
             pending: !m.userId,
             isYou: m.userId === user._id,
@@ -37,7 +37,7 @@ export const list = query({
         }),
       )),
     ];
-    return { people, canManage: role !== "responder", emailReady: !!process.env.RESEND_API_KEY };
+    return { people, canManage: isManager(role), emailReady: !!process.env.RESEND_API_KEY };
   },
 });
 
@@ -82,7 +82,7 @@ export const update = mutation({
   },
   handler: async (ctx, { communityId, memberId, role, notify }) => {
     const access = await requireCommunity(ctx, communityId);
-    const canManage = access.role !== "responder";
+    const canManage = isManager(access.role);
     if (memberId === null) {
       if (access.user._id !== access.owner._id && !canManage) throw new ConvexError("Only the owner or a manager can change this.");
       if (notify) await ctx.db.patch(communityId, { ownerNotify: notify });

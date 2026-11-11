@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
-import { requireCommunity, randomCode } from "./lib/auth";
+import { requireCommunity, requireResponder, randomCode } from "./lib/auth";
 import { staffRole } from "./schema";
 import { rematchMentions } from "./reviews";
 import { Doc, Id } from "./_generated/dataModel";
@@ -16,10 +16,10 @@ function firstNameLastInitial(name: string) {
   return parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1][0]}.` : parts[0];
 }
 
-async function requireStaff(ctx: QueryCtx | MutationCtx, staffId: Id<"staff">) {
+async function requireStaff(ctx: QueryCtx | MutationCtx, staffId: Id<"staff">, change = false) {
   const staff = await ctx.db.get(staffId);
   if (!staff) throw new ConvexError("Team member not found.");
-  const { community } = await requireCommunity(ctx, staff.communityId);
+  const { community } = await (change ? requireResponder : requireCommunity)(ctx, staff.communityId);
   return { staff, community };
 }
 
@@ -103,7 +103,7 @@ export const create = mutation({
     startDate: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireCommunity(ctx, args.communityId);
+    const { user } = await requireResponder(ctx, args.communityId);
     const name = args.name.trim();
     if (name.length < 2) throw new ConvexError("Enter the team member's name.");
     const staffId = await ctx.db.insert("staff", {
@@ -147,7 +147,7 @@ export const update = mutation({
     active: v.optional(v.boolean()),
   },
   handler: async (ctx, { staffId, ...patch }) => {
-    const { staff } = await requireStaff(ctx, staffId);
+    const { staff } = await requireStaff(ctx, staffId, true);
     if (patch.name !== undefined && patch.name.trim().length < 2) throw new ConvexError("Enter a name.");
     if (patch.bio && patch.bio.length > 1200) throw new ConvexError("Keep the summary under 1,200 characters.");
     await ctx.db.patch(staffId, {
@@ -162,7 +162,7 @@ export const update = mutation({
 export const remove = mutation({
   args: { staffId: v.id("staff") },
   handler: async (ctx, { staffId }) => {
-    const { staff } = await requireStaff(ctx, staffId);
+    const { staff } = await requireStaff(ctx, staffId, true);
     const tags = await ctx.db.query("tags").withIndex("by_staff", (q) => q.eq("staffId", staffId)).collect();
     for (const t of tags) {
       if (t.kind === "link") await ctx.db.delete(t._id);
