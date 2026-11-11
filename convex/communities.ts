@@ -2,7 +2,7 @@ import { action, internalMutation, internalQuery, mutation, query } from "./_gen
 import { internal } from "./_generated/api";
 import { ConvexError, v } from "convex/values";
 import { requireActive, requireCommunity, requireUser } from "./lib/auth";
-import { placeDetails, searchPlaces, PlaceHit, writeReviewUrl } from "./lib/google";
+import { placeDetails, searchPlaces, suggestPlaces, PlaceHit, PlaceSuggestion, writeReviewUrl } from "./lib/google";
 import { Id } from "./_generated/dataModel";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -73,6 +73,17 @@ export const search = action({
     await ctx.runQuery(internal.users.current, {});
     if (query.trim().length < 3) return [];
     return await searchPlaces(query.trim());
+  },
+});
+
+/** Type-ahead while the manager is typing a property name. */
+export const suggest = action({
+  args: { query: v.string(), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { query, sessionToken }): Promise<PlaceSuggestion[]> => {
+    await ctx.runQuery(internal.users.current, {});
+    const q = query.trim().slice(0, 120);
+    if (q.length < 3) return [];
+    return await suggestPlaces(q, sessionToken);
   },
 });
 
