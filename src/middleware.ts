@@ -1,12 +1,14 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
-// Public: marketing page, auth pages, the NFC/QR tap redirect, and shared staff profiles.
+// Public: marketing page, auth pages, the NFC/QR tap redirect, shared staff profiles, and legal pages.
 const isPublicRoute = createRouteMatcher([
   '/',
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/t/(.*)',
   '/staff/(.*)',
+  '/privacy',
+  '/terms',
 ])
 
 export default clerkMiddleware(async (auth, request) => {

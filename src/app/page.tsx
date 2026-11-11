@@ -196,7 +196,9 @@ export default function Home() {
       </section>
 
       <footer className="border-t border-slate-200 px-4 py-8 text-sm text-slate-500 text-center">
-        © {new Date().getFullYear()} APT Reputation
+        © {new Date().getFullYear()} APT Reputation ·{" "}
+        <Link href="/privacy" className="underline hover:text-slate-700">Privacy</Link> ·{" "}
+        <Link href="/terms" className="underline hover:text-slate-700">Terms</Link>
       </footer>
 
       <Dialog open={open} onOpenChange={setOpen}>

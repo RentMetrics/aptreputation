@@ -12,6 +12,10 @@ export default function SignUpPage() {
         14-day free trial. No card needed to start.
       </p>
       <SignUp fallbackRedirectUrl="/dashboard" signInUrl="/sign-in" />
+      <p className="text-sm text-slate-500 text-center max-w-sm">
+        By creating an account you agree to our <Link href="/terms" className="underline">Terms</Link> and{" "}
+        <Link href="/privacy" className="underline">Privacy Policy</Link>.
+      </p>
     </main>
   )
 }
