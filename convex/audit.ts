@@ -71,9 +71,18 @@ export const run = action({
     if (!(await ctx.runMutation(internal.audit.countUse, {}))) {
       throw new ConvexError("The free audit is at capacity for today. Please try again tomorrow, or sign up for a full report.");
     }
-    const hits = await searchPlaces(q);
-    if (hits.length === 0) return null;
-    const hit = hits[0];
+    // Prefer a place with reviews. A bare name can match a street or a
+    // neighbourhood first, so retry as an apartment search when it does.
+    const best = (list: Awaited<ReturnType<typeof searchPlaces>>) => list.find((h) => h.rating) ?? null;
+    let hits = await searchPlaces(q);
+    let hit = best(hits);
+    if (!hit && !/apartment/i.test(q)) {
+      const retry = await searchPlaces(`${q} apartments`);
+      hit = best(retry);
+      if (retry.length) hits = retry;
+    }
+    hit = hit ?? hits[0] ?? null;
+    if (!hit) return null;
     const cachedJson = await ctx.runQuery(internal.audit.cached, { placeId: hit.placeId });
     if (cachedJson) return JSON.parse(cachedJson) as AuditResult;
 
