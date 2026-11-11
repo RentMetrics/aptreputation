@@ -8,43 +8,68 @@
  * @module
  */
 
+import type * as admin from "../admin.js";
+import type * as ai from "../ai.js";
+import type * as audit from "../audit.js";
+import type * as billing from "../billing.js";
+import type * as communities from "../communities.js";
+import type * as crons from "../crons.js";
+import type * as google from "../google.js";
+import type * as http from "../http.js";
+import type * as lib_auth from "../lib/auth.js";
+import type * as lib_google from "../lib/google.js";
+import type * as reviews from "../reviews.js";
+import type * as staff from "../staff.js";
+import type * as tags from "../tags.js";
+import type * as users from "../users.js";
+
 import type {
   ApiFromModules,
   FilterApi,
   FunctionReference,
 } from "convex/server";
-import type * as aiAnalysis from "../aiAnalysis.js";
-import type * as auditLogs from "../auditLogs.js";
-import type * as googleApis from "../googleApis.js";
-import type * as googlePlaces from "../googlePlaces.js";
-import type * as properties from "../properties.js";
-import type * as propertySync from "../propertySync.js";
-import type * as reviews from "../reviews.js";
-import type * as userProperties from "../userProperties.js";
+
+declare const fullApi: ApiFromModules<{
+  admin: typeof admin;
+  ai: typeof ai;
+  audit: typeof audit;
+  billing: typeof billing;
+  communities: typeof communities;
+  crons: typeof crons;
+  google: typeof google;
+  http: typeof http;
+  "lib/auth": typeof lib_auth;
+  "lib/google": typeof lib_google;
+  reviews: typeof reviews;
+  staff: typeof staff;
+  tags: typeof tags;
+  users: typeof users;
+}>;
 
 /**
- * A utility for referencing Convex functions in your app's API.
+ * A utility for referencing Convex functions in your app's public API.
  *
  * Usage:
  * ```js
  * const myFunctionReference = api.myModule.myFunction;
  * ```
  */
-declare const fullApi: ApiFromModules<{
-  aiAnalysis: typeof aiAnalysis;
-  auditLogs: typeof auditLogs;
-  googleApis: typeof googleApis;
-  googlePlaces: typeof googlePlaces;
-  properties: typeof properties;
-  propertySync: typeof propertySync;
-  reviews: typeof reviews;
-  userProperties: typeof userProperties;
-}>;
 export declare const api: FilterApi<
   typeof fullApi,
   FunctionReference<any, "public">
 >;
+
+/**
+ * A utility for referencing Convex functions in your app's internal API.
+ *
+ * Usage:
+ * ```js
+ * const myFunctionReference = internal.myModule.myFunction;
+ * ```
+ */
 export declare const internal: FilterApi<
   typeof fullApi,
   FunctionReference<any, "internal">
 >;
+
+export declare const components: {};

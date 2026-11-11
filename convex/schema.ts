@@ -1,19 +1,35 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+export const staffRole = v.union(
+  v.literal("manager"),
+  v.literal("leasing"),
+  v.literal("maintenance"),
+  v.literal("other"),
+);
+
+export const mention = v.object({
+  name: v.string(),
+  staffId: v.optional(v.id("staff")),
+  // suggested = AI matched a name, a manager has not confirmed it yet
+  status: v.union(v.literal("suggested"), v.literal("confirmed"), v.literal("rejected")),
+  sentiment: v.union(v.literal("positive"), v.literal("neutral"), v.literal("negative")),
+});
+
 export default defineSchema({
-  // Properties table - stores apartment properties
+  // Legacy pre-loaded catalog from the 2025 prototype. Not used by the app;
+  // kept so the existing rows are not lost.
   properties: defineTable({
-    propertyId: v.optional(v.string()), // Excel Property ID
+    propertyId: v.optional(v.string()),
     name: v.string(),
     address: v.string(),
     city: v.string(),
     state: v.string(),
     zipCode: v.string(),
-    totalUnits: v.optional(v.number()), // Excel Total Units
-    yearBuilt: v.optional(v.number()), // Excel Year Built
-    averageUnitSize: v.optional(v.number()), // Excel Average Unit Size
-    googlePlaceId: v.optional(v.string()), // Google Maps Place ID
+    totalUnits: v.optional(v.number()),
+    yearBuilt: v.optional(v.number()),
+    averageUnitSize: v.optional(v.number()),
+    googlePlaceId: v.optional(v.string()),
     googleRating: v.optional(v.number()),
     totalReviews: v.optional(v.number()),
     aptReputationScore: v.optional(v.number()),
@@ -23,164 +39,175 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_google_place_id", ["googlePlaceId"]).index("by_property_id", ["propertyId"]),
 
-  // Users table - property managers/owners
   users: defineTable({
+    tokenIdentifier: v.string(),
     email: v.string(),
     name: v.string(),
-    company: v.optional(v.string()),
-    subscriptionTier: v.union(v.literal("starter"), v.literal("pro"), v.literal("portfolio")),
-    isActive: v.boolean(),
+    role: v.union(v.literal("customer"), v.literal("admin")),
+    stripeCustomerId: v.optional(v.string()),
+    subscriptionId: v.optional(v.string()),
+    subscriptionStatus: v.optional(v.string()),
     createdAt: v.number(),
-    updatedAt: v.number(),
-  }).index("by_email", ["email"]),
-
-  // User-Property relationships (many-to-many)
-  userProperties: defineTable({
-    userId: v.id("users"),
-    propertyId: v.id("properties"),
-    role: v.union(v.literal("owner"), v.literal("manager"), v.literal("viewer")),
-    createdAt: v.number(),
-  }).index("by_user", ["userId"]).index("by_property", ["propertyId"]),
-
-  // Google OAuth tokens - for Business Information API access
-  googleOAuthTokens: defineTable({
-    userId: v.id("users"),
-    accessToken: v.string(),
-    refreshToken: v.optional(v.string()),
-    expiresAt: v.optional(v.number()),
-    scope: v.string(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  }).index("by_user", ["userId"]),
-
-  // Google My Business accounts
-  googleMyBusinessAccounts: defineTable({
-    userId: v.id("users"),
-    accountName: v.string(), // e.g., "accounts/123456789"
-    accountId: v.string(), // e.g., "123456789"
-    accountType: v.optional(v.string()),
-    createdAt: v.number(),
-  }).index("by_user", ["userId"]).index("by_account_name", ["accountName"]),
-
-  // Google My Business locations
-  googleMyBusinessLocations: defineTable({
-    accountId: v.id("googleMyBusinessAccounts"),
-    locationName: v.string(), // e.g., "accounts/123456789/locations/987654321"
-    locationId: v.string(), // e.g., "987654321"
-    title: v.optional(v.string()),
-    address: v.optional(v.string()),
-    phone: v.optional(v.string()),
-    website: v.optional(v.string()),
-    rating: v.optional(v.number()),
-    reviewCount: v.optional(v.number()),
-    createdAt: v.number(),
-  }).index("by_account", ["accountId"]).index("by_location_name", ["locationName"]),
-
-  // Property-Google location mapping
-  propertyGoogleMapping: defineTable({
-    propertyId: v.id("properties"),
-    googleLocationId: v.id("googleMyBusinessLocations"),
-    startingRating: v.optional(v.number()),
-    webhookUrl: v.optional(v.string()),
-    isActive: v.boolean(),
-    createdAt: v.number(),
-  }).index("by_property", ["propertyId"]).index("by_location", ["googleLocationId"]),
-
-  // Reviews table - Google reviews for properties
-  reviews: defineTable({
-    propertyId: v.id("properties"),
-    googleReviewId: v.string(), // Google's review ID
-    reviewerName: v.string(),
-    rating: v.number(), // 1-5 stars
-    reviewText: v.string(),
-    reviewDate: v.number(), // timestamp
-    sentiment: v.union(v.literal("positive"), v.literal("neutral"), v.literal("negative")),
-    themes: v.array(v.string()), // AI-extracted themes
-    needsResponse: v.boolean(),
-    hasResponse: v.boolean(),
-    responseText: v.optional(v.string()),
-    responseDate: v.optional(v.number()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
   })
-    .index("by_property", ["propertyId"])
-    .index("by_google_review_id", ["googleReviewId"])
-    .index("by_needs_response", ["propertyId", "needsResponse"]),
+    .index("by_token", ["tokenIdentifier"])
+    .index("by_stripe_customer", ["stripeCustomerId"]),
 
-  // AI Analysis table - stores AI-generated insights
-  aiAnalysis: defineTable({
-    propertyId: v.id("properties"),
-    period: v.string(), // e.g., "July 2025"
-    overallSentimentTrend: v.string(),
-    topPositiveThemes: v.array(v.string()),
-    topNegativeThemes: v.array(v.string()),
-    actionableRecommendations: v.array(v.string()),
-    createdAt: v.number(),
-  }).index("by_property", ["propertyId"]),
-
-  // NFC Cards table - for NFC review generation
-  nfcCards: defineTable({
-    propertyId: v.id("properties"),
-    cardId: v.string(), // Unique NFC card identifier
-    isActive: v.boolean(),
-    lastUsed: v.optional(v.number()),
-    createdAt: v.number(),
-  }).index("by_property", ["propertyId"]).index("by_card_id", ["cardId"]),
-
-  // Audit Logs table - for tracking reputation audits
-  auditLogs: defineTable({
-    propertyName: v.string(),
-    propertyAddress: v.string(),
+  // A managed apartment community ("property" in the UI).
+  communities: defineTable({
+    ownerId: v.id("users"),
+    name: v.string(),
+    address: v.string(),
+    googlePlaceId: v.string(),
     googleRating: v.optional(v.number()),
     totalReviews: v.optional(v.number()),
-    aptReputationScore: v.optional(v.number()),
-    sentiment: v.optional(v.string()),
-    topThemes: v.optional(v.array(v.string())),
-    concerns: v.optional(v.array(v.string())),
-    recommendations: v.optional(v.array(v.string())),
-    ipAddress: v.optional(v.string()),
-    userAgent: v.optional(v.string()),
-    createdAt: v.number(),
-  }).index("by_created_at", ["createdAt"]),
-
-  // Rating History table - track rating changes over time from baseline
-  ratingHistory: defineTable({
-    propertyId: v.id("properties"),
-    rating: v.number(),
-    totalReviews: v.number(),
-    reputationScore: v.optional(v.number()),
-    baselineRating: v.number(), // Reference to starting rating
-    improvement: v.number(), // Difference from baseline
-    improvementPercent: v.number(), // Percentage improvement
-    recordedAt: v.number(), // timestamp when this rating was recorded
+    baselineRating: v.optional(v.number()),
+    baselineReviews: v.optional(v.number()),
+    // Google Business Profile location, e.g. "accounts/123/locations/456"
+    gbpLocation: v.optional(v.string()),
+    gbpLocationTitle: v.optional(v.string()),
+    lastSyncAt: v.optional(v.number()),
+    lastSyncSource: v.optional(v.union(v.literal("places"), v.literal("business"))),
+    lastSyncError: v.optional(v.string()),
     createdAt: v.number(),
   })
-    .index("by_property", ["propertyId"])
-    .index("by_property_and_date", ["propertyId", "recordedAt"]),
+    .index("by_owner", ["ownerId"])
+    .index("by_place", ["googlePlaceId"]),
 
-  // AI Improvement Strategies table - detailed AI analysis for properties
-  improvementStrategies: defineTable({
-    propertyId: v.id("properties"),
+  // One Google account connection per user. Never returned to the client.
+  googleConnections: defineTable({
+    userId: v.id("users"),
+    googleEmail: v.optional(v.string()),
+    accessToken: v.string(),
+    refreshToken: v.optional(v.string()),
+    expiresAt: v.number(),
+    scope: v.string(),
+  }).index("by_user", ["userId"]),
+
+  oauthStates: defineTable({
+    userId: v.id("users"),
+    state: v.string(),
+    createdAt: v.number(),
+  }).index("by_state", ["state"]),
+
+  reviews: defineTable({
+    communityId: v.id("communities"),
+    source: v.union(v.literal("places"), v.literal("business")),
+    externalId: v.string(),
+    reviewerName: v.string(),
+    rating: v.number(),
+    text: v.string(),
+    reviewDate: v.number(),
+    // AI analysis
+    analyzedAt: v.optional(v.number()),
+    sentiment: v.optional(v.union(v.literal("positive"), v.literal("neutral"), v.literal("negative"))),
+    themes: v.optional(v.array(v.string())),
+    urgent: v.optional(v.boolean()),
+    mentions: v.optional(v.array(mention)),
+    // Reply workflow
+    replyText: v.optional(v.string()), // reply live on Google
+    replyAt: v.optional(v.number()),
+    draftReply: v.optional(v.string()),
+    draftAt: v.optional(v.number()),
+    // Staff whose card/link was tapped shortly before this review appeared
+    assistedStaffId: v.optional(v.id("staff")),
+    createdAt: v.number(),
+  })
+    .index("by_community_date", ["communityId", "reviewDate"])
+    .index("by_community_external", ["communityId", "externalId"]),
+
+  staff: defineTable({
+    ownerId: v.id("users"),
+    communityId: v.id("communities"),
+    name: v.string(),
+    role: staffRole,
+    title: v.optional(v.string()),
+    startDate: v.optional(v.string()), // YYYY-MM
+    bio: v.optional(v.string()),
+    skills: v.optional(v.array(v.string())),
+    slug: v.string(),
+    isPublic: v.boolean(),
+    active: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_community", ["communityId"])
+    .index("by_slug", ["slug"]),
+
+  // Anything a resident can tap or scan: a physical NFC card or a printable
+  // QR/link. Each has a short code served at /t/<code>.
+  tags: defineTable({
+    code: v.string(),
+    kind: v.union(v.literal("nfc"), v.literal("link")),
+    serial: v.optional(v.string()), // NFC chip UID, e.g. 04:C2:88:D2:5F:61:80
+    label: v.optional(v.string()),
+    ownerId: v.optional(v.id("users")),
+    communityId: v.optional(v.id("communities")),
+    staffId: v.optional(v.id("staff")),
+    disabled: v.optional(v.boolean()),
+    tapCount: v.number(),
+    lastTapAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_code", ["code"])
+    .index("by_serial", ["serial"])
+    .index("by_community", ["communityId"])
+    .index("by_owner", ["ownerId"])
+    .index("by_staff", ["staffId"]),
+
+  taps: defineTable({
+    tagId: v.id("tags"),
+    communityId: v.id("communities"),
+    staffId: v.optional(v.id("staff")),
+    at: v.number(),
+  })
+    .index("by_community_at", ["communityId", "at"])
+    .index("by_staff_at", ["staffId", "at"]),
+
+  insights: defineTable({
+    communityId: v.id("communities"),
+    generatedAt: v.number(),
+    reviewCount: v.number(),
     summary: v.string(),
-    keyFindings: v.array(v.object({
-      category: v.string(),
-      sentiment: v.string(),
-      frequency: v.string(),
-      impact: v.string(),
-      finding: v.string(),
+    strengths: v.array(v.object({ theme: v.string(), detail: v.string(), reviewCount: v.number() })),
+    problems: v.array(v.object({
+      theme: v.string(),
+      detail: v.string(),
+      reviewCount: v.number(),
       recommendation: v.string(),
     })),
-    actionPlan: v.array(v.object({
-      priority: v.string(),
+    actions: v.array(v.object({
+      priority: v.union(v.literal("now"), v.literal("next"), v.literal("ongoing")),
       action: v.string(),
-      expectedImpact: v.string(),
-      effort: v.string(),
+      why: v.string(),
     })),
-    themes: v.array(v.string()),
-    basedOnReviewCount: v.number(),
-    generatedAt: v.number(),
+  }).index("by_community", ["communityId", "generatedAt"]),
+
+  ratingSnapshots: defineTable({
+    communityId: v.id("communities"),
+    rating: v.number(),
+    totalReviews: v.number(),
+    at: v.number(),
+  }).index("by_community_at", ["communityId", "at"]),
+
+  // Public audit (lead magnet)
+  auditCache: defineTable({
+    placeId: v.string(),
+    at: v.number(),
+    result: v.string(), // JSON
+  }).index("by_place", ["placeId"]),
+
+  leads: defineTable({
+    email: v.string(),
+    propertyName: v.string(),
+    address: v.optional(v.string()),
+    placeId: v.optional(v.string()),
+    rating: v.optional(v.number()),
+    totalReviews: v.optional(v.number()),
+    score: v.optional(v.number()),
     createdAt: v.number(),
-  })
-    .index("by_property", ["propertyId"])
-    .index("by_generated_at", ["propertyId", "generatedAt"]),
-}); 
+  }).index("by_created", ["createdAt"]),
+
+  usage: defineTable({
+    key: v.string(), // e.g. "audit:2026-11-10"
+    count: v.number(),
+  }).index("by_key", ["key"]),
+});

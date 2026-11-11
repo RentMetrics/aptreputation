@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AptReputation
 
-## Getting Started
+Google review management for apartment communities: a review inbox with AI reply
+drafts, resident insights, NFC/QR review requests with tap tracking, and shareable
+staff profiles ("mini resumes") built from the reviews that name each team member.
 
-First, run the development server:
+Stack: Next.js 15 (App Router) · Convex · Clerk · Stripe · Claude (Anthropic API).
+
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npx convex dev      # pushes functions, watches for changes
+npm run dev         # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Next.js only needs the Clerk keys and the Convex URL (`.env.local`). Every other
+secret lives in the Convex environment — see `env.example` for the full list.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## How it fits together
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Area | Where |
+|---|---|
+| Access rules (sign-in, ownership, admin, trial/subscription) | `convex/lib/auth.ts` |
+| Properties, public Places lookup | `convex/communities.ts`, `convex/lib/google.ts` |
+| Google Business Profile connect, full review sync, posting replies | `convex/google.ts` |
+| Reviews, staff-mention confirmation, insights storage | `convex/reviews.ts` |
+| AI: per-review analysis, reply drafts, insights, audit summary | `convex/ai.ts` |
+| Team profiles and the public profile query | `convex/staff.ts`, `src/app/staff/[slug]` |
+| NFC cards, QR links, tap logging, admin card inventory | `convex/tags.ts`, `src/app/t/[code]` |
+| Stripe checkout, portal, webhook | `convex/billing.ts`, `convex/http.ts` |
+| Free audit + lead capture | `convex/audit.ts`, `src/app/page.tsx` |
 
-## Learn More
+### Reviews: two sources
 
-To learn more about Next.js, take a look at the following resources:
+* **Public sample** — Google's Places API returns only the 5 newest reviews. Used for
+  the free audit and until a property is linked.
+* **Business Profile** — once the manager connects Google and links the location,
+  every review is synced (every 6 hours and on demand) and replies post to Google.
+  The Google Cloud project must be approved for the Business Profile APIs.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### NFC cards
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Every card or QR link has a 7-character code served at `/t/<code>`. A tap is logged,
+then the visitor is redirected to the property's Google review form.
 
-## Deploy on Vercel
+* Admin → NFC cards: load physical cards into inventory (by chip serial or as a
+  count), download the CSV of links, and write each link to its card as a URL record.
+* Customers add a card on a property's **Get reviews** tab, by code (cards you
+  shipped) or as a blank card (they get a link to write themselves).
+* Assign a card to a team member to credit their taps. A review that appears within
+  48 hours of a tap is shown as "after a tap" for that person (a likely match — Google
+  does not say who tapped).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Review-request rules (do not remove)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Everyone is sent to the same Google form. No pre-screening by sentiment and no
+incentives: both violate Google's review policy and the FTC's fake-review rule.
+
+## Pricing
+
+$99 per property per month, 14-day free trial without a card. Quantity follows the
+number of properties.
