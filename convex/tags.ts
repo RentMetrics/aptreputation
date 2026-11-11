@@ -228,7 +228,71 @@ export const adminRelease = mutation({
   args: { tagId: v.id("tags") },
   handler: async (ctx, { tagId }) => {
     await requireAdmin(ctx);
-    await ctx.db.patch(tagId, { ownerId: undefined, communityId: undefined, staffId: undefined });
+    await ctx.db.patch(tagId, { ownerId: undefined, communityId: undefined, staffId: undefined, shippedAt: undefined });
+  },
+});
+
+/**
+ * Put inventory cards on a customer's property before mailing them. The cards
+ * work as soon as they are assigned: a tap opens that property's Google review
+ * form, and the customer sees them under Get reviews.
+ */
+export const adminAssign = mutation({
+  args: {
+    communityId: v.id("communities"),
+    tagIds: v.optional(v.array(v.id("tags"))),
+    count: v.optional(v.number()),
+    label: v.optional(v.string()),
+  },
+  handler: async (ctx, { communityId, tagIds, count, label }) => {
+    await requireAdmin(ctx);
+    const community = await ctx.db.get(communityId);
+    if (!community) throw new ConvexError("Property not found.");
+    let cards = [];
+    if (tagIds?.length) {
+      for (const id of tagIds) {
+        const tag = await ctx.db.get(id);
+        if (!tag || tag.kind !== "nfc") throw new ConvexError("Card not found.");
+        if (tag.communityId && tag.communityId !== communityId) {
+          throw new ConvexError(`Card ${tag.code} is already on another property. Return it to inventory first.`);
+        }
+        cards.push(tag);
+      }
+    } else {
+      if (!count || !Number.isInteger(count) || count < 1 || count > 100) {
+        throw new ConvexError("Choose between 1 and 100 cards.");
+      }
+      const all = await ctx.db.query("tags").withIndex("by_owner", (q) => q.eq("ownerId", undefined)).collect();
+      cards = all.filter((t) => t.kind === "nfc" && !t.communityId).slice(0, count);
+      if (cards.length < count) {
+        throw new ConvexError(`Only ${cards.length} card${cards.length === 1 ? "" : "s"} left in inventory. Add more first.`);
+      }
+    }
+    const existing = await ctx.db.query("tags").withIndex("by_community", (q) => q.eq("communityId", communityId)).collect();
+    let n = existing.filter((t) => t.kind === "nfc").length;
+    for (const tag of cards) {
+      await ctx.db.patch(tag._id, {
+        ownerId: community.ownerId,
+        communityId,
+        staffId: undefined,
+        disabled: false,
+        label: label?.trim() || tag.label || `Card ${++n}`,
+      });
+    }
+    return cards.map((t) => t.code);
+  },
+});
+
+export const adminMarkShipped = mutation({
+  args: { tagIds: v.array(v.id("tags")), shipped: v.boolean() },
+  handler: async (ctx, { tagIds, shipped }) => {
+    await requireAdmin(ctx);
+    for (const id of tagIds) {
+      const tag = await ctx.db.get(id);
+      if (!tag || tag.kind !== "nfc") continue;
+      if (shipped && !tag.communityId) throw new ConvexError(`Assign card ${tag.code} to a property before marking it mailed.`);
+      await ctx.db.patch(id, { shippedAt: shipped ? Date.now() : undefined });
+    }
   },
 });
 

@@ -20,6 +20,7 @@ import type * as lib_auth from "../lib/auth.js";
 import type * as lib_google from "../lib/google.js";
 import type * as members from "../members.js";
 import type * as notify from "../notify.js";
+import type * as prospects from "../prospects.js";
 import type * as reviews from "../reviews.js";
 import type * as staff from "../staff.js";
 import type * as tags from "../tags.js";
@@ -44,6 +45,7 @@ declare const fullApi: ApiFromModules<{
   "lib/google": typeof lib_google;
   members: typeof members;
   notify: typeof notify;
+  prospects: typeof prospects;
   reviews: typeof reviews;
   staff: typeof staff;
   tags: typeof tags;

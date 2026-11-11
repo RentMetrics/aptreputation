@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useState } from "react"
+import { Suspense, useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
@@ -83,15 +83,14 @@ export default function Home() {
   const [leadState, setLeadState] = useState<"idle" | "saving" | "saved">("idle")
   const [leadError, setLeadError] = useState<string | null>(null)
 
-  const search = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (query.trim().length < 3) return
+  const check = async (text: string) => {
+    if (text.trim().length < 3) return
     setLoading(true)
     setError(null)
     setAudit(null)
     setLeadState("idle")
     try {
-      const result = await runAudit({ query })
+      const result = await runAudit({ query: text })
       if (result) setAudit(result)
       else setError("We couldn't find that property on Google. Try the full name and city.")
     } catch (err) {
@@ -101,6 +100,24 @@ export default function Home() {
       setOpen(true)
     }
   }
+
+  const search = (e: React.FormEvent) => {
+    e.preventDefault()
+    void check(query)
+  }
+
+  // Outreach links arrive as /?audit=<property name and city> and open the
+  // audit for that property straight away.
+  const linked = useRef(false)
+  useEffect(() => {
+    if (linked.current) return
+    linked.current = true
+    const wanted = new URLSearchParams(window.location.search).get("audit")?.slice(0, 200)
+    if (!wanted) return
+    setQuery(wanted)
+    void check(wanted)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const sendLead = async (e: React.FormEvent) => {
     e.preventDefault()

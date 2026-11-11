@@ -190,3 +190,93 @@ export async function googleError(res: Response): Promise<string> {
   if (res.status === 401) return "Google sign-in expired. Reconnect Google in Settings.";
   return `Google error ${res.status}. ${detail}`.trim();
 }
+
+// ---- marketing list: find a known community on Google ----------------------
+
+export type ProspectLookup = {
+  name: string;
+  address?: string;
+  city: string;
+  state: string;
+  lat?: number;
+  lng?: number;
+};
+
+export type ProspectMatch = {
+  placeId: string;
+  name: string;
+  rating?: number;
+  totalReviews?: number;
+};
+
+const NAME_NOISE = new Set([
+  "the", "at", "of", "on", "in", "and", "apartments", "apartment", "apts", "apt", "homes", "apartment homes",
+  "residences", "living", "community", "phase", "i", "ii", "iii",
+]);
+
+function nameTokens(name: string) {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .split(/\s+/)
+    .filter((t) => t.length > 1 && !NAME_NOISE.has(t));
+}
+
+function sharesName(a: string, b: string) {
+  const tb = new Set(nameTokens(b));
+  return nameTokens(a).some((t) => tb.has(t));
+}
+
+function metersApart(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const a =
+    Math.sin(rad(lat2 - lat1) / 2) ** 2 +
+    Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(rad(lng2 - lng1) / 2) ** 2;
+  return 6371000 * 2 * Math.asin(Math.sqrt(a));
+}
+
+/**
+ * Finds one community on Google and returns its rating, or null when nothing
+ * convincing comes back. Two requests: an ID-only text search (not billed),
+ * then one Place Details request for the rating. A result only counts when it
+ * is at the same spot, or nearby with a matching name, so a neighbour's rating
+ * is never attached to the wrong property.
+ */
+export async function matchProspect(p: ProspectLookup): Promise<ProspectMatch | null> {
+  const hasPoint = typeof p.lat === "number" && typeof p.lng === "number";
+  const search = await placesNew(
+    "places:searchText",
+    {
+      textQuery: [`${p.name} apartments`, p.address, p.city, p.state].filter(Boolean).join(", "),
+      regionCode: "US",
+      pageSize: 1,
+      ...(hasPoint
+        ? { locationBias: { circle: { center: { latitude: p.lat, longitude: p.lng }, radius: 2000 } } }
+        : {}),
+    },
+    "places.id",
+  );
+  const id: string | undefined = search.places?.[0]?.id;
+  if (!id) return null;
+
+  const res = await fetch(`${PLACES_NEW}/places/${encodeURIComponent(id)}`, {
+    headers: {
+      "X-Goog-Api-Key": mapsKey(),
+      "X-Goog-FieldMask": "id,displayName,formattedAddress,location,rating,userRatingCount",
+    },
+  });
+  const place = await res.json();
+  if (!res.ok) throw new ConvexError(`Google Places lookup failed: ${place?.error?.message ?? res.status}`);
+
+  const foundName: string = place.displayName?.text ?? "";
+  const sameName = sharesName(p.name, foundName);
+  let ok: boolean;
+  if (hasPoint && place.location) {
+    const d = metersApart(p.lat!, p.lng!, place.location.latitude, place.location.longitude);
+    ok = d <= 250 || (d <= 2500 && sameName);
+  } else {
+    ok = sameName && (place.formattedAddress ?? "").toLowerCase().includes(p.city.toLowerCase());
+  }
+  if (!ok) return null;
+  return { placeId: place.id, name: foundName, rating: place.rating, totalReviews: place.userRatingCount };
+}

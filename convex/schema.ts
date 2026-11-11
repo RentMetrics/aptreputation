@@ -11,6 +11,20 @@ export const staffRole = v.union(
 export const notifyPref = v.union(v.literal("all"), v.literal("negative"), v.literal("none"));
 export const memberRole = v.union(v.literal("manager"), v.literal("responder"));
 
+export const prospectStatus = v.union(
+  v.literal("new"),
+  v.literal("rated"),
+  v.literal("noreviews"),
+  v.literal("nomatch"),
+);
+export const outreachStatus = v.union(
+  v.literal("contacted"),
+  v.literal("replied"),
+  v.literal("customer"),
+  v.literal("skip"),
+);
+export const prospectGroupKind = v.union(v.literal("metro"), v.literal("state"), v.literal("management"));
+
 export const mention = v.object({
   name: v.string(),
   staffId: v.optional(v.id("staff")),
@@ -168,6 +182,8 @@ export default defineSchema({
     disabled: v.optional(v.boolean()),
     tapCount: v.number(),
     lastTapAt: v.optional(v.number()),
+    // Set when we mail a card we assigned to the customer's property.
+    shippedAt: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_code", ["code"])
@@ -228,6 +244,69 @@ export default defineSchema({
     score: v.optional(v.number()),
     createdAt: v.number(),
   }).index("by_created", ["createdAt"]),
+
+  // Marketing list: apartment communities we could sell to. Loaded by
+  // scripts/prospects-load.mjs. Admin-only; never returned by a public function.
+  prospects: defineTable({
+    sourceId: v.string(),
+    name: v.string(),
+    address: v.optional(v.string()),
+    city: v.string(),
+    state: v.string(),
+    zip: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    lat: v.optional(v.number()),
+    lng: v.optional(v.number()),
+    metro: v.string(),
+    units: v.optional(v.number()),
+    owner: v.optional(v.string()),
+    management: v.optional(v.string()),
+    managementKey: v.string(), // normalized company name, "" when unknown
+    // new = not looked up yet, rated = found with a rating,
+    // noreviews = found but Google shows no rating, nomatch = not found
+    rateStatus: prospectStatus,
+    googlePlaceId: v.optional(v.string()),
+    googleName: v.optional(v.string()),
+    googleRating: v.optional(v.number()),
+    googleReviews: v.optional(v.number()),
+    ratedAt: v.optional(v.number()),
+    outreach: v.optional(outreachStatus),
+    note: v.optional(v.string()),
+  })
+    .index("by_source", ["sourceId"])
+    .index("by_status", ["rateStatus", "googleRating"])
+    .index("by_metro", ["metro", "rateStatus", "googleRating"])
+    .index("by_state", ["state", "rateStatus", "googleRating"])
+    .index("by_management", ["managementKey", "rateStatus", "googleRating"])
+    .searchIndex("search_name", { searchField: "name", filterFields: ["state"] }),
+
+  // Rollups of the marketing list by metro, state and management company.
+  prospectGroups: defineTable({
+    kind: prospectGroupKind,
+    key: v.string(),
+    name: v.string(),
+    properties: v.number(),
+    units: v.number(),
+    rated: v.number(),
+    ratingSum: v.number(),
+  })
+    .index("by_kind_key", ["kind", "key"])
+    .index("by_kind_size", ["kind", "properties"]),
+
+  // A run that looks up Google ratings for part of the marketing list.
+  ratingJobs: defineTable({
+    scopeKind: v.union(v.literal("all"), prospectGroupKind),
+    scopeKey: v.optional(v.string()),
+    scopeName: v.string(),
+    limit: v.number(),
+    done: v.number(),
+    rated: v.number(),
+    noMatch: v.number(),
+    status: v.union(v.literal("running"), v.literal("done"), v.literal("stopped"), v.literal("failed")),
+    error: v.optional(v.string()),
+    startedAt: v.number(),
+    finishedAt: v.optional(v.number()),
+  }).index("by_started", ["startedAt"]),
 
   usage: defineTable({
     key: v.string(), // e.g. "audit:2026-11-10"
