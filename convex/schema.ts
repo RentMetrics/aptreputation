@@ -8,6 +8,9 @@ export const staffRole = v.union(
   v.literal("other"),
 );
 
+export const notifyPref = v.union(v.literal("all"), v.literal("negative"), v.literal("none"));
+export const memberRole = v.union(v.literal("manager"), v.literal("responder"));
+
 export const mention = v.object({
   name: v.string(),
   staffId: v.optional(v.id("staff")),
@@ -65,6 +68,9 @@ export default defineSchema({
     // Google Business Profile location, e.g. "accounts/123/locations/456"
     gbpLocation: v.optional(v.string()),
     gbpLocationTitle: v.optional(v.string()),
+    // Whose Google connection is used to read reviews and post replies.
+    gbpConnectedBy: v.optional(v.id("users")),
+    ownerNotify: v.optional(notifyPref),
     lastSyncAt: v.optional(v.number()),
     lastSyncSource: v.optional(v.union(v.literal("places"), v.literal("business"))),
     lastSyncError: v.optional(v.string()),
@@ -72,6 +78,21 @@ export default defineSchema({
   })
     .index("by_owner", ["ownerId"])
     .index("by_place", ["googlePlaceId"]),
+
+  // People who can work on a property besides its owner. A row with no userId
+  // is an invitation waiting for that email address to sign up.
+  members: defineTable({
+    communityId: v.id("communities"),
+    email: v.string(),
+    userId: v.optional(v.id("users")),
+    role: memberRole,
+    notify: notifyPref,
+    invitedBy: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_community", ["communityId"])
+    .index("by_user", ["userId"])
+    .index("by_email", ["email"]),
 
   // One Google account connection per user. Never returned to the client.
   googleConnections: defineTable({
@@ -110,6 +131,8 @@ export default defineSchema({
     draftAt: v.optional(v.number()),
     // Staff whose card/link was tapped shortly before this review appeared
     assistedStaffId: v.optional(v.id("staff")),
+    // New-review email: pending until sent (or skipped when email is not set up).
+    notifyState: v.optional(v.union(v.literal("pending"), v.literal("sent"), v.literal("skipped"))),
     createdAt: v.number(),
   })
     .index("by_community_date", ["communityId", "reviewDate"])

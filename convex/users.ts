@@ -20,19 +20,31 @@ export const ensure = mutation({
     // Only a verified email can grant the admin role.
     const role = email && identity.emailVerified && isAdminEmail(email) ? "admin" : "customer";
     const existing = await getUser(ctx);
+    let userId = existing?._id;
     if (existing) {
       if (existing.role !== role || existing.email !== email) {
         await ctx.db.patch(existing._id, { role, email });
       }
-      return existing._id;
+    } else {
+      userId = await ctx.db.insert("users", {
+        tokenIdentifier: identity.tokenIdentifier,
+        email,
+        name: identity.name ?? email,
+        role,
+        createdAt: Date.now(),
+      });
     }
-    return await ctx.db.insert("users", {
-      tokenIdentifier: identity.tokenIdentifier,
-      email,
-      name: identity.name ?? email,
-      role,
-      createdAt: Date.now(),
-    });
+    // Accept any property invitations sent to this (verified) email address.
+    if (email && identity.emailVerified) {
+      const invites = await ctx.db
+        .query("members")
+        .withIndex("by_email", (q) => q.eq("email", email.toLowerCase()))
+        .collect();
+      for (const invite of invites) {
+        if (!invite.userId) await ctx.db.patch(invite._id, { userId });
+      }
+    }
+    return userId;
   },
 });
 

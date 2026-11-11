@@ -106,6 +106,9 @@ function ReviewCard({ review, staff, linked, placeId }: { review: Review; staff:
         <Stars rating={review.rating} />
         <span className="font-medium">{review.reviewerName}</span>
         <span className="text-sm text-slate-500">{formatDate(review.reviewDate)}</span>
+        {review.sinceJoining && (
+          <span className="text-xs font-medium text-brand bg-blue-50 rounded-full px-2 py-0.5">Since joining</span>
+        )}
         {review.urgent && (
           <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-800 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">
             <AlertTriangle className="h-3 w-3" />Urgent

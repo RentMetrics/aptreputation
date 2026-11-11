@@ -1,7 +1,7 @@
 import { action, internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { ConvexError, v } from "convex/values";
-import { requireActive, requireCommunity, requireUser, randomCode, accessState } from "./lib/auth";
+import { requireActive, requireManager, requireUser, randomCode, accessState } from "./lib/auth";
 import { businessReviews, googleError, placeDetails } from "./lib/google";
 import { Id } from "./_generated/dataModel";
 import { ActionCtx } from "./_generated/server";
@@ -138,8 +138,14 @@ export const disconnect = mutation({
     const user = await requireUser(ctx);
     const conn = await ctx.db.query("googleConnections").withIndex("by_user", (q) => q.eq("userId", user._id)).unique();
     if (conn) await ctx.db.delete(conn._id);
-    const mine = await ctx.db.query("communities").withIndex("by_owner", (q) => q.eq("ownerId", user._id)).collect();
-    for (const c of mine) await ctx.db.patch(c._id, { gbpLocation: undefined, gbpLocationTitle: undefined });
+    // Unlink every property that was reading Google through this person's connection.
+    const all = await ctx.db.query("communities").collect();
+    for (const c of all) {
+      const usesMine = c.gbpConnectedBy ? c.gbpConnectedBy === user._id : c.ownerId === user._id;
+      if (c.gbpLocation && usesMine) {
+        await ctx.db.patch(c._id, { gbpLocation: undefined, gbpLocationTitle: undefined, gbpConnectedBy: undefined });
+      }
+    }
   },
 });
 
@@ -225,10 +231,10 @@ export const listLocations = action({
 export const linkLocation = mutation({
   args: { communityId: v.id("communities"), location: v.string(), title: v.string() },
   handler: async (ctx, { communityId, location, title }) => {
-    const { user } = await requireCommunity(ctx, communityId);
-    requireActive(user);
+    const { user, owner } = await requireManager(ctx, communityId);
+    requireActive(owner);
     if (!/^accounts\/[^/]+\/locations\/[^/]+$/.test(location)) throw new ConvexError("Invalid location.");
-    await ctx.db.patch(communityId, { gbpLocation: location, gbpLocationTitle: title });
+    await ctx.db.patch(communityId, { gbpLocation: location, gbpLocationTitle: title, gbpConnectedBy: user._id });
     await ctx.scheduler.runAfter(0, internal.google.sync, { communityId });
   },
 });
@@ -236,8 +242,8 @@ export const linkLocation = mutation({
 export const unlinkLocation = mutation({
   args: { communityId: v.id("communities") },
   handler: async (ctx, { communityId }) => {
-    await requireCommunity(ctx, communityId);
-    await ctx.db.patch(communityId, { gbpLocation: undefined, gbpLocationTitle: undefined });
+    await requireManager(ctx, communityId);
+    await ctx.db.patch(communityId, { gbpLocation: undefined, gbpLocationTitle: undefined, gbpConnectedBy: undefined });
   },
 });
 
@@ -248,9 +254,11 @@ export const sync = internalAction({
     const community = await ctx.runQuery(internal.communities.byId, { communityId });
     if (!community) return { ok: false, error: "Property not found." };
     const source = community.gbpLocation ? "business" as const : "places" as const;
+    // Only alert on reviews that arrive after the first import from this source.
+    const notify = community.lastSyncAt !== undefined && community.lastSyncSource === source && !community.lastSyncError;
     try {
       if (community.gbpLocation) {
-        const token = await accessToken(ctx, community.ownerId);
+        const token = await accessToken(ctx, community.gbpConnectedBy ?? community.ownerId);
         const { reviews, rating, total } = await businessReviews(token, community.gbpLocation);
         await ctx.runMutation(internal.reviews.clearPlacesSample, { communityId });
         for (let i = 0; i < reviews.length; i += 100) {
@@ -260,6 +268,7 @@ export const sync = internalAction({
             reviews: reviews.slice(i, i + 100),
             rating,
             totalReviews: total,
+            notify,
           });
         }
       } else {
@@ -270,6 +279,7 @@ export const sync = internalAction({
           reviews: place.reviews,
           rating: place.rating,
           totalReviews: place.totalReviews,
+          notify,
         });
       }
       await ctx.runMutation(internal.communities.setSyncResult, { communityId, source });
@@ -286,8 +296,8 @@ export const sync = internalAction({
 export const syncNow = action({
   args: { communityId: v.id("communities") },
   handler: async (ctx, { communityId }): Promise<{ ok: boolean; error?: string }> => {
-    const { user } = await ctx.runQuery(internal.communities.access, { communityId });
-    requireActive(user);
+    const { owner } = await ctx.runQuery(internal.communities.access, { communityId });
+    requireActive(owner);
     return await ctx.runAction(internal.google.sync, { communityId });
   },
 });
@@ -314,15 +324,15 @@ export const syncAll = internalAction({
 export const postReply = action({
   args: { reviewId: v.id("reviews"), text: v.string() },
   handler: async (ctx, { reviewId, text }): Promise<null> => {
-    const { review, user, community } = await ctx.runQuery(internal.reviews.forAction, { reviewId });
-    requireActive(user);
+    const { review, owner, community } = await ctx.runQuery(internal.reviews.forAction, { reviewId });
+    requireActive(owner);
     const comment = text.trim();
     if (!comment) throw new ConvexError("Reply text is empty.");
     if (comment.length > 4000) throw new ConvexError("Google limits replies to 4,000 characters.");
     if (!community.gbpLocation || review.source !== "business") {
       throw new ConvexError("Link this property to its Google Business Profile to post replies from here.");
     }
-    const token = await accessToken(ctx, community.ownerId);
+    const token = await accessToken(ctx, community.gbpConnectedBy ?? community.ownerId);
     const res = await fetch(
       `https://mybusiness.googleapis.com/v4/${community.gbpLocation}/reviews/${encodeURIComponent(review.externalId)}/reply`,
       {

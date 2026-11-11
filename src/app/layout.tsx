@@ -1,22 +1,23 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Instrument_Sans } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { ClerkProvider } from "@clerk/nextjs";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const display = Bricolage_Grotesque({
+  variable: "--font-display-face",
   subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const body = Instrument_Sans({
+  variable: "--font-body-face",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "APT Reputation - AI-Powered Reputation Management",
-  description: "Transform your property's online reputation with AI-powered review management and insights.",
+  title: "AptReputation: Google review management for apartment communities",
+  description: "Reply to every Google review, earn more of them with tap cards, see what residents are saying, and track your rating from the day you join.",
   icons: {
     icon: [
       {
@@ -49,7 +50,7 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en">
         <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+          className={`${display.variable} ${body.variable} antialiased`}
         >
           <Providers>
             {children}

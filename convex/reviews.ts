@@ -1,6 +1,7 @@
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
 import { requireCommunity, requireUser } from "./lib/auth";
+import { internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
 import { MutationCtx, QueryCtx } from "./_generated/server";
 
@@ -19,14 +20,14 @@ const incoming = v.object({
 async function requireReview(ctx: QueryCtx | MutationCtx, reviewId: Id<"reviews">) {
   const review = await ctx.db.get(reviewId);
   if (!review) throw new ConvexError("Review not found.");
-  const { user, community } = await requireCommunity(ctx, review.communityId);
-  return { review, user, community };
+  const access = await requireCommunity(ctx, review.communityId);
+  return { review, ...access };
 }
 
 export const list = query({
   args: { communityId: v.id("communities") },
   handler: async (ctx, { communityId }) => {
-    await requireCommunity(ctx, communityId);
+    const { community } = await requireCommunity(ctx, communityId);
     const reviews = await ctx.db
       .query("reviews")
       .withIndex("by_community_date", (q) => q.eq("communityId", communityId))
@@ -39,6 +40,7 @@ export const list = query({
     const names = new Map(staff.map((s) => [s._id, s.name]));
     return reviews.map((r) => ({
       ...r,
+      sinceJoining: r.reviewDate >= community.createdAt,
       mentions: (r.mentions ?? []).map((m) => ({
         ...m,
         staffName: m.staffId ? names.get(m.staffId) : undefined,
@@ -130,11 +132,15 @@ export const upsertBatch = internalMutation({
     reviews: v.array(incoming),
     rating: v.optional(v.number()),
     totalReviews: v.optional(v.number()),
+    // False for a first import, so a new customer is not emailed their whole history.
+    notify: v.optional(v.boolean()),
   },
-  handler: async (ctx, { communityId, source, reviews, rating, totalReviews }) => {
+  handler: async (ctx, { communityId, source, reviews, rating, totalReviews, notify }) => {
     const community = await ctx.db.get(communityId);
     if (!community) return { inserted: 0 };
     let inserted = 0;
+    let toNotify = 0;
+    const recentCutoff = Date.now() - 14 * 24 * HOUR;
     for (const rv of reviews) {
       const existing = await ctx.db
         .query("reviews")
@@ -163,15 +169,20 @@ export const upsertBatch = internalMutation({
         .order("desc")
         .take(20);
       const assisted = taps.find((t) => t.staffId)?.staffId;
+      const alert = notify === true && rv.reviewDate >= recentCutoff;
       await ctx.db.insert("reviews", {
         communityId,
         source,
         ...rv,
         assistedStaffId: assisted,
+        notifyState: alert ? "pending" : undefined,
         createdAt: Date.now(),
       });
       inserted++;
+      if (alert) toNotify++;
     }
+    // Wait briefly so the email can include the AI's read of the review.
+    if (toNotify > 0) await ctx.scheduler.runAfter(90_000, internal.notify.flush, { communityId });
     if (rating !== undefined && totalReviews !== undefined) {
       await ctx.db.patch(communityId, { googleRating: rating, totalReviews });
       const last = await ctx.db

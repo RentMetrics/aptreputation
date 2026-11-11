@@ -28,6 +28,9 @@ secret lives in the Convex environment — see `env.example` for the full list.
 | AI: per-review analysis, reply drafts, insights, audit summary | `convex/ai.ts` |
 | Team profiles and the public profile query | `convex/staff.ts`, `src/app/staff/[slug]` |
 | NFC cards, QR links, tap logging, admin card inventory | `convex/tags.ts`, `src/app/t/[code]` |
+| Team access per property (owner, manager, team member) | `convex/members.ts` |
+| New-review emails and invitations (Resend) | `convex/notify.ts` |
+| Progress since joining (baseline, charts) | `convex/communities.ts` (`progress`), `src/components/charts.tsx` |
 | Stripe checkout, portal, webhook | `convex/billing.ts`, `convex/http.ts` |
 | Free audit + lead capture | `convex/audit.ts`, `src/app/page.tsx` |
 
@@ -36,7 +39,7 @@ secret lives in the Convex environment — see `env.example` for the full list.
 * **Public sample** — Google's Places API returns only the 5 newest reviews. Used for
   the free audit and until a property is linked.
 * **Business Profile** — once the manager connects Google and links the location,
-  every review is synced (every 6 hours and on demand) and replies post to Google.
+  every review is synced (hourly and on demand) and replies post to Google.
   The Google Cloud project must be approved for the Business Profile APIs.
 
 ### NFC cards

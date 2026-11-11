@@ -1,26 +1,110 @@
 @import "tailwindcss";
 
+/*
+  AptReputation design tokens.
+  Ink navy and a cool paper ground from the leasing-office world, the logo's
+  blue for actions, and marigold kept for one job only: stars.
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ink: #0f2a4a;
+  --paper: #f1f5f9;
+  --surface: #ffffff;
+  --brand: #1554c0;
+  --brand-deep: #0e3f93;
+  --star: #f2a413;
+  --gain: #12784a;
+  --loss: #b42318;
+  --line: #d6dfe9;
+  --muted: #4d5f78;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-body-face), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display-face), ui-sans-serif, system-ui, sans-serif;
+
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-brand: var(--brand);
+  --color-brand-deep: var(--brand-deep);
+  --color-star: var(--star);
+  --color-gain: var(--gain);
+  --color-loss: var(--loss);
+  --color-line: var(--line);
+  --color-muted: var(--muted);
+
+  /* shadcn component tokens */
+  --color-background: var(--surface);
+  --color-foreground: var(--ink);
+  --color-primary: var(--brand);
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #e7eef6;
+  --color-secondary-foreground: var(--ink);
+  --color-accent: #e7eef6;
+  --color-accent-foreground: var(--ink);
+  --color-destructive: var(--loss);
+  --color-border: var(--line);
+  --color-input: #b9c6d6;
+  --color-ring: var(--brand);
+  --color-muted-foreground: var(--muted);
+
+  /* Neutrals carry a little of the navy so greys never look dead next to it. */
+  --color-slate-50: #f5f8fb;
+  --color-slate-100: #eaf0f6;
+  --color-slate-200: #d6dfe9;
+  --color-slate-300: #b9c6d6;
+  --color-slate-400: #8496ad;
+  --color-slate-500: #617590;
+  --color-slate-600: #4d5f78;
+  --color-slate-700: #33465f;
+  --color-slate-800: #1c3350;
+  --color-slate-900: #0f2a4a;
+
+  --color-blue-50: #eaf1fd;
+  --color-blue-200: #bcd2f7;
+  --color-blue-400: #5b8fe6;
+  --color-blue-500: #2f6fdb;
+  --color-blue-600: #1554c0;
+  --color-blue-700: #0e3f93;
+  --color-blue-800: #0c3478;
+  --color-blue-900: #0b2a5e;
+  --color-blue-950: #081f47;
+
+  --color-amber-400: #f2a413;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+  }
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+  input:focus-visible, textarea:focus-visible, select:focus-visible {
+    outline-offset: 0;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* The one piece of motion: the hero rating settles upward once on load. */
+@keyframes settle {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.settle { animation: settle 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.settle-2 { animation-delay: 0.12s; }
+.settle-3 { animation-delay: 0.24s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .settle { animation: none; }
+  * { transition: none !important; }
 }

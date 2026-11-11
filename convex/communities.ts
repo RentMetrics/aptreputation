@@ -1,7 +1,7 @@
 import { action, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { ConvexError, v } from "convex/values";
-import { requireActive, requireCommunity, requireUser } from "./lib/auth";
+import { requireActive, requireCommunity, requireManager, requireUser } from "./lib/auth";
 import { placeDetails, searchPlaces, suggestPlaces, PlaceHit, PlaceSuggestion, writeReviewUrl } from "./lib/google";
 import { Id } from "./_generated/dataModel";
 
@@ -11,10 +11,15 @@ export const list = query({
   args: {},
   handler: async (ctx) => {
     const user = await requireUser(ctx);
-    const communities = await ctx.db
+    const owned = await ctx.db
       .query("communities")
       .withIndex("by_owner", (q) => q.eq("ownerId", user._id))
       .collect();
+    const memberships = await ctx.db.query("members").withIndex("by_user", (q) => q.eq("userId", user._id)).collect();
+    const shared = (await Promise.all(memberships.map((m) => ctx.db.get(m.communityId)))).filter(
+      (c): c is NonNullable<typeof c> => c !== null && c.ownerId !== user._id,
+    );
+    const communities = [...owned, ...shared];
     const since = Date.now() - 30 * DAY;
     return await Promise.all(
       communities.map(async (c) => {
@@ -26,8 +31,11 @@ export const list = query({
           .query("taps")
           .withIndex("by_community_at", (q) => q.eq("communityId", c._id).gte("at", since))
           .collect();
+        const sinceJoining = reviews.filter((r) => r.reviewDate >= c.createdAt);
         return {
           ...c,
+          isOwner: c.ownerId === user._id,
+          positiveSinceJoining: sinceJoining.filter((r) => r.rating >= 4).length,
           loadedReviews: reviews.length,
           needsReply: reviews.filter((r) => !r.replyText).length,
           urgent: reviews.filter((r) => r.urgent && !r.replyText).length,
@@ -42,12 +50,8 @@ export const list = query({
 export const get = query({
   args: { communityId: v.id("communities") },
   handler: async (ctx, { communityId }) => {
-    const { community } = await requireCommunity(ctx, communityId);
-    const snapshots = await ctx.db
-      .query("ratingSnapshots")
-      .withIndex("by_community_at", (q) => q.eq("communityId", communityId))
-      .collect();
-    return { ...community, reviewUrl: writeReviewUrl(community.googlePlaceId), snapshots };
+    const { community, role } = await requireCommunity(ctx, communityId);
+    return { ...community, role, reviewUrl: writeReviewUrl(community.googlePlaceId) };
   },
 });
 
@@ -163,7 +167,9 @@ export const setSyncResult = internalMutation({
 export const remove = mutation({
   args: { communityId: v.id("communities") },
   handler: async (ctx, { communityId }) => {
-    const { user } = await requireCommunity(ctx, communityId);
+    const { owner: user } = await requireManager(ctx, communityId);
+    const members = await ctx.db.query("members").withIndex("by_community", (q) => q.eq("communityId", communityId)).collect();
+    for (const m of members) await ctx.db.delete(m._id);
     for (const table of ["reviews", "insights", "ratingSnapshots", "taps"] as const) {
       const index = table === "reviews" ? "by_community_date" : table === "insights" ? "by_community" : "by_community_at";
       const rows = await (ctx.db.query(table) as any)
@@ -181,5 +187,70 @@ export const remove = mutation({
     }
     await ctx.db.delete(communityId);
     await ctx.scheduler.runAfter(0, internal.billing.syncQuantity, { userId: user._id });
+  },
+});
+
+const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/**
+ * Progress since the property joined. The Google rating and review total are
+ * exact. Star-by-star counts come from the reviews we have loaded, so they are
+ * complete only once the Business Profile is linked.
+ */
+export const progress = query({
+  args: { communityId: v.id("communities") },
+  handler: async (ctx, { communityId }) => {
+    const { community } = await requireCommunity(ctx, communityId);
+    const reviews = await ctx.db
+      .query("reviews")
+      .withIndex("by_community_date", (q) => q.eq("communityId", communityId))
+      .collect();
+    const snapshots = await ctx.db
+      .query("ratingSnapshots")
+      .withIndex("by_community_at", (q) => q.eq("communityId", communityId))
+      .collect();
+    const taps = await ctx.db
+      .query("taps")
+      .withIndex("by_community_at", (q) => q.eq("communityId", communityId))
+      .collect();
+
+    const joined = community.createdAt;
+    const summarize = (rows: typeof reviews) => ({
+      count: rows.length,
+      positive: rows.filter((r) => r.rating >= 4).length,
+      negative: rows.filter((r) => r.rating <= 2).length,
+      average: rows.length ? Math.round((rows.reduce((n, r) => n + r.rating, 0) / rows.length) * 100) / 100 : null,
+      replied: rows.filter((r) => r.replyText).length,
+    });
+    const since = reviews.filter((r) => r.reviewDate >= joined);
+    const before = reviews.filter((r) => r.reviewDate < joined);
+
+    // Last 12 calendar months of 4-5 star reviews, oldest first.
+    const now = new Date();
+    const months = Array.from({ length: 12 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
+      const end = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
+      const inMonth = reviews.filter((r) => r.reviewDate >= d.getTime() && r.reviewDate < end);
+      return {
+        label: `${MONTH_LABELS[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`,
+        start: d.getTime(),
+        // A review counts as "since joining" by its own date, so the joining month can hold both.
+        positiveBefore: inMonth.filter((r) => r.rating >= 4 && r.reviewDate < joined).length,
+        positiveSince: inMonth.filter((r) => r.rating >= 4 && r.reviewDate >= joined).length,
+        total: inMonth.length,
+      };
+    });
+
+    return {
+      joined,
+      fullHistory: community.lastSyncSource === "business",
+      baseline: { rating: community.baselineRating ?? null, reviews: community.baselineReviews ?? null },
+      current: { rating: community.googleRating ?? null, reviews: community.totalReviews ?? null },
+      since: summarize(since),
+      before: summarize(before),
+      tapsSinceJoining: taps.length,
+      snapshots: snapshots.map((s) => ({ at: s.at, rating: s.rating, totalReviews: s.totalReviews })),
+      months,
+    };
   },
 });

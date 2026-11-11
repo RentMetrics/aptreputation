@@ -37,11 +37,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   ]
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center gap-6">
-          <Link href="/dashboard" className="shrink-0">
-            <Image src="/apt-reputation-logo-full-md.png" alt="APT Reputation" width={150} height={40} className="h-9 w-auto" priority />
+    <div className="min-h-screen bg-paper text-ink">
+      <header className="bg-ink text-white">
+        <div className="max-w-6xl mx-auto px-5 h-16 flex items-center gap-6">
+          <Link href="/dashboard" className="shrink-0 bg-white rounded-lg px-2.5 py-1.5">
+            <Image src="/apt-reputation-logo-full-md.png" alt="APT Reputation" width={150} height={40} className="h-7 w-auto" priority />
           </Link>
           <nav className="flex gap-1 flex-1" aria-label="Main">
             {links.map((l) => {
@@ -50,7 +50,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Link
                   key={l.href}
                   href={l.href}
-                  className={`px-3 py-2 rounded-md text-sm font-medium ${active ? "bg-slate-100 text-slate-900" : "text-slate-600 hover:text-slate-900"}`}
+                  aria-current={active ? "page" : undefined}
+                  className={`px-3 py-2 rounded-md text-sm font-medium ${active ? "bg-white/15 text-white" : "text-blue-200 hover:text-white"}`}
                 >
                   {l.label}
                 </Link>
@@ -67,7 +68,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {me && !me.subscribed && me.role !== "admin" && (
         <div className={`px-4 py-2.5 text-sm ${me.inTrial ? "bg-blue-50 text-blue-900" : "bg-amber-50 text-amber-900"}`}>
-          <div className="max-w-6xl mx-auto flex flex-wrap items-center gap-x-3 gap-y-1">
+          <div className="max-w-6xl mx-auto px-1 flex flex-wrap items-center gap-x-3 gap-y-1">
             <span>
               {me.inTrial
                 ? `Free trial until ${formatDate(me.trialEndsAt)}.`
@@ -80,8 +81,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       )}
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        {me ? children : <p className="text-slate-500 py-16 text-center">Loading your account…</p>}
+      <main className="max-w-6xl mx-auto px-5 py-8">
+        {me ? children : <p className="text-muted py-16 text-center">Loading your account…</p>}
       </main>
     </div>
   )

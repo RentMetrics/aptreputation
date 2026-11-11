@@ -10,6 +10,7 @@ import { Id } from "@/convex/_generated/dataModel"
 import { Stars } from "@/components/stars"
 import { ReviewsTab } from "@/components/property/reviews-tab"
 import { InsightsTab } from "@/components/property/insights-tab"
+import { ProgressTab } from "@/components/property/progress-tab"
 import { RequestsTab } from "@/components/property/requests-tab"
 import { TeamTab } from "@/components/property/team-tab"
 import { SettingsTab } from "@/components/property/settings-tab"
@@ -17,6 +18,7 @@ import { formatDate } from "@/lib/format"
 
 const TABS = [
   { key: "reviews", label: "Reviews" },
+  { key: "progress", label: "Progress" },
   { key: "insights", label: "Insights" },
   { key: "requests", label: "Get reviews" },
   { key: "team", label: "Team" },
@@ -48,22 +50,26 @@ export default function PropertyPage() {
         <ArrowLeft className="h-4 w-4 mr-1" />All properties
       </Link>
 
-      <div className="bg-white border border-slate-200 rounded-xl p-5 mb-6 flex flex-wrap items-center gap-6">
+      <div className="bg-white border border-line rounded-2xl p-6 mb-6 flex flex-wrap items-center gap-x-10 gap-y-5">
         <div className="flex-1 min-w-64">
-          <h1 className="text-2xl font-bold">{community.name}</h1>
-          <p className="text-slate-600">{community.address}</p>
+          <h1 className="font-display text-3xl font-bold">{community.name}</h1>
+          <p className="text-muted mt-0.5">{community.address}</p>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-4xl font-bold tabular-nums">{community.googleRating?.toFixed(1) ?? "–"}</span>
+        <div className="flex items-center gap-4">
+          <span className="font-display text-6xl font-extrabold tabular-nums leading-none">{community.googleRating?.toFixed(1) ?? "–"}</span>
           <div>
-            <Stars rating={community.googleRating ?? 0} size={18} />
-            <p className="text-sm text-slate-600">{community.totalReviews ?? 0} Google reviews</p>
+            <Stars rating={community.googleRating ?? 0} size={20} />
+            <p className="text-sm text-muted mt-0.5">{community.totalReviews ?? 0} Google reviews</p>
           </div>
         </div>
-        <dl className="text-sm text-slate-700">
-          <div className="flex gap-2"><dt className="text-slate-500">Started at</dt><dd className="tabular-nums">{community.baselineRating?.toFixed(1) ?? "–"} on {formatDate(community.createdAt)}</dd></div>
-          <div className="flex gap-2"><dt className="text-slate-500">Change</dt><dd className="tabular-nums">{delta === null ? "–" : `${delta > 0 ? "+" : ""}${delta.toFixed(1)} stars`}{added !== null ? `, ${added >= 0 ? "+" : ""}${added} reviews` : ""}</dd></div>
-        </dl>
+        <div className="text-sm border-l border-line pl-6">
+          <p className="text-muted">Since joining {formatDate(community.createdAt)}</p>
+          <p className={`font-semibold tabular-nums ${delta !== null && delta > 0 ? "text-gain" : delta !== null && delta < 0 ? "text-loss" : "text-ink"}`}>
+            {delta === null ? "–" : `${delta > 0 ? "+" : ""}${delta.toFixed(1)} stars`}
+            {added !== null ? `, ${added >= 0 ? "+" : ""}${added} reviews` : ""}
+          </p>
+          <p className="text-muted">Started at {community.baselineRating?.toFixed(1) ?? "–"}</p>
+        </div>
       </div>
 
       <div className="border-b border-slate-200 mb-6 flex gap-1 overflow-x-auto" role="tablist" aria-label="Property sections">
@@ -74,7 +80,7 @@ export default function PropertyPage() {
             aria-selected={tab === t.key}
             onClick={() => setTab(t.key)}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px whitespace-nowrap ${
-              tab === t.key ? "border-blue-600 text-blue-700" : "border-transparent text-slate-600 hover:text-slate-900"
+              tab === t.key ? "border-brand text-brand font-semibold" : "border-transparent text-muted hover:text-ink"
             }`}
           >
             {t.label}
@@ -83,10 +89,11 @@ export default function PropertyPage() {
       </div>
 
       {tab === "reviews" && <ReviewsTab communityId={communityId} linked={!!community.gbpLocation} placeId={community.googlePlaceId} />}
+      {tab === "progress" && <ProgressTab communityId={communityId} />}
       {tab === "insights" && <InsightsTab communityId={communityId} />}
       {tab === "requests" && <RequestsTab communityId={communityId} />}
       {tab === "team" && <TeamTab communityId={communityId} />}
-      {tab === "settings" && <SettingsTab community={community} />}
+      {tab === "settings" && <SettingsTab community={community} canManage={community.role !== "responder"} />}
     </div>
   )
 }

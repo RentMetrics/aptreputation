@@ -26,17 +26,40 @@ export async function requireAdmin(ctx: QueryCtx | MutationCtx): Promise<Doc<"us
   return user;
 }
 
-/** The signed-in user must own the community (admins can open any). */
+export type Access = {
+  user: Doc<"users">;
+  community: Doc<"communities">;
+  /** The account that pays for the property; its trial/subscription gates features. */
+  owner: Doc<"users">;
+  role: "owner" | "manager" | "responder";
+};
+
+/** The signed-in user must own the property or be on its team (admins can open any). */
 export async function requireCommunity(
   ctx: QueryCtx | MutationCtx,
   communityId: Id<"communities">,
-): Promise<{ user: Doc<"users">; community: Doc<"communities"> }> {
+): Promise<Access> {
   const user = await requireUser(ctx);
   const community = await ctx.db.get(communityId);
-  if (!community || (community.ownerId !== user._id && user.role !== "admin")) {
-    throw new ConvexError("Property not found.");
-  }
-  return { user, community };
+  if (!community) throw new ConvexError("Property not found.");
+  if (community.ownerId === user._id) return { user, community, owner: user, role: "owner" };
+  const owner = await ctx.db.get(community.ownerId);
+  if (!owner) throw new ConvexError("Property not found.");
+  if (user.role === "admin") return { user, community, owner, role: "owner" };
+  const memberships = await ctx.db
+    .query("members")
+    .withIndex("by_user", (q) => q.eq("userId", user._id))
+    .collect();
+  const member = memberships.find((m) => m.communityId === communityId);
+  if (!member) throw new ConvexError("Property not found.");
+  return { user, community, owner, role: member.role };
+}
+
+/** Owners and managers only: people, Google connection, removing the property. */
+export async function requireManager(ctx: QueryCtx | MutationCtx, communityId: Id<"communities">): Promise<Access> {
+  const access = await requireCommunity(ctx, communityId);
+  if (access.role === "responder") throw new ConvexError("Only the owner or a manager can change this.");
+  return access;
 }
 
 export function accessState(user: Doc<"users">, now: number) {
@@ -54,7 +77,7 @@ export function accessState(user: Doc<"users">, now: number) {
 /** Paid features (sync, AI, replies) need a subscription or an unexpired trial. */
 export function requireActive(user: Doc<"users">) {
   if (!accessState(user, Date.now()).active) {
-    throw new ConvexError("Your free trial has ended. Add a subscription in Billing to continue.");
+    throw new ConvexError("Your free trial has ended. The account owner can add a subscription in Billing to continue.");
   }
 }
 

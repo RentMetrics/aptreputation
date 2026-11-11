@@ -133,8 +133,8 @@ Write the way a capable, warm community manager would:
 export const draftReply = action({
   args: { reviewId: v.id("reviews") },
   handler: async (ctx, { reviewId }): Promise<string> => {
-    const { review, user, community } = await ctx.runQuery(internal.reviews.forAction, { reviewId });
-    requireActive(user);
+    const { review, owner, community } = await ctx.runQuery(internal.reviews.forAction, { reviewId });
+    requireActive(owner);
     const prompt = `Community: ${community.name}
 Reviewer: ${review.reviewerName}
 Rating: ${review.rating} of 5 stars
@@ -191,8 +191,8 @@ export const refreshInsights = internalAction({
 export const generateInsights = action({
   args: { communityId: v.id("communities") },
   handler: async (ctx, { communityId }): Promise<null> => {
-    const { user } = await ctx.runQuery(internal.communities.access, { communityId });
-    requireActive(user);
+    const { owner } = await ctx.runQuery(internal.communities.access, { communityId });
+    requireActive(owner);
     const made = await buildInsights(ctx, communityId);
     if (!made) throw new ConvexError("At least 3 written reviews are needed to generate insights.");
     return null;

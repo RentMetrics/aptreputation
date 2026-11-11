@@ -8,10 +8,11 @@ import { api } from "@/convex/_generated/api"
 import { Doc } from "@/convex/_generated/dataModel"
 import { Button } from "@/components/ui/button"
 import { errorMessage, timeAgo } from "@/lib/format"
+import { PeopleSection } from "@/components/property/people-section"
 
 type Location = { location: string; title: string; address: string }
 
-export function SettingsTab({ community }: { community: Doc<"communities"> }) {
+export function SettingsTab({ community, canManage }: { community: Doc<"communities">; canManage: boolean }) {
   const router = useRouter()
   const status = useQuery(api.google.status)
   const startConnect = useMutation(api.google.startConnect)
@@ -40,11 +41,17 @@ export function SettingsTab({ community }: { community: Doc<"communities"> }) {
 
   return (
     <div className="space-y-6 max-w-3xl">
+      <PeopleSection communityId={community._id} />
+
       <section className="bg-white border border-slate-200 rounded-xl p-5">
         <h2 className="text-lg font-semibold">Google Business Profile</h2>
         <p className="text-sm text-slate-600 mt-1">
-          Without this link we can only see the 5 reviews Google shows publicly. Linking the profile you manage loads
-          every review and lets you post replies from the Reviews tab.
+          Without this link we can only see the 5 reviews Google shows publicly. Linking the profile loads every
+          review and lets the whole team post replies from the Reviews tab.
+        </p>
+        <p className="text-sm text-slate-600 mt-2">
+          Only one person needs to do this: someone who is an owner or manager of the property&apos;s profile in Google.
+          Everyone you invite above then replies through that connection, without their own Google access.
         </p>
 
         {community.gbpLocation ? (
@@ -116,7 +123,7 @@ export function SettingsTab({ community }: { community: Doc<"communities"> }) {
         </Button>
       </section>
 
-      <section className="bg-white border border-red-200 rounded-xl p-5">
+      {canManage && <section className="bg-white border border-red-200 rounded-xl p-5">
         <h2 className="text-lg font-semibold">Remove property</h2>
         <p className="text-sm text-slate-600 mt-1">
           Deletes this property&apos;s reviews, insights, team profiles and links from AptReputation. Nothing on Google changes.
@@ -133,7 +140,7 @@ export function SettingsTab({ community }: { community: Doc<"communities"> }) {
         >
           Remove property
         </Button>
-      </section>
+      </section>}
 
       {error && <p className="text-sm text-red-700" role="alert">{error}</p>}
     </div>
