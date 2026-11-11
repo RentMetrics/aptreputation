@@ -10,7 +10,7 @@ export default function TermsPage() {
     <LegalPage title="Terms of Service">
       <section>
         <p>
-          These terms are an agreement between you and {LEGAL.company} (&ldquo;we&rdquo;, &ldquo;us&rdquo;) for use of
+          These terms are an agreement between you and {LEGAL.company}, which operates {LEGAL.product} (&ldquo;we&rdquo;, &ldquo;us&rdquo;), for use of
           the AptReputation website and application (the &ldquo;Service&rdquo;). By creating an account or using the
           Service you agree to them. If you use the Service for a company, you agree on its behalf and confirm you
           have authority to do so.

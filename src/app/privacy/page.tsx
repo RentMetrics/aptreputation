@@ -10,7 +10,7 @@ export default function PrivacyPage() {
     <LegalPage title="Privacy Policy">
       <section>
         <p>
-          {LEGAL.company} (&ldquo;we&rdquo;, &ldquo;us&rdquo;) provides review management software for apartment
+          {LEGAL.company}, which operates {LEGAL.product} (&ldquo;we&rdquo;, &ldquo;us&rdquo;), provides review management software for apartment
           communities at {LEGAL.site}. This policy explains what information we collect, how we use it, and the
           choices you have. It applies to our website and to the AptReputation application.
         </p>

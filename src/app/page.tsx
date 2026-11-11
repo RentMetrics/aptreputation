@@ -351,7 +351,10 @@ export default function Home() {
 
       <footer className="border-t border-line bg-white py-8 text-sm text-muted">
         <div className="max-w-6xl mx-auto px-5 flex flex-wrap items-center justify-between gap-3">
-          <span>© {new Date().getFullYear()} APT Reputation</span>
+          <span>
+            © {new Date().getFullYear()} Apartment Reputation (AptReputation) ·{" "}
+            <a href="mailto:contact@aptreputation.com" className="hover:text-ink underline">contact@aptreputation.com</a>
+          </span>
           <span className="flex gap-5">
             <Link href="/privacy" className="hover:text-ink underline">Privacy</Link>
             <Link href="/terms" className="hover:text-ink underline">Terms</Link>

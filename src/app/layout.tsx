@@ -16,7 +16,7 @@ const body = Instrument_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "AptReputation: Google review management for apartment communities",
+  title: "AptReputation (Apartment Reputation): Google review management for apartment communities",
   description: "Reply to every Google review, earn more of them with tap cards, see what residents are saying, and track your rating from the day you join.",
   icons: {
     icon: [
