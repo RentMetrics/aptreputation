@@ -4,7 +4,7 @@ import { ConvexError, v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { MutationCtx } from "./_generated/server";
 import { requireAdmin, randomCode } from "./lib/auth";
-import { POSTAL_ADDRESS, PUBLIC_SITE, STEP_GAP_DAYS, sequence } from "./lib/outreachCopy";
+import { POSTAL_ADDRESS, PUBLIC_SITE, SENDER, STEP_GAP_DAYS, sequence } from "./lib/outreachCopy";
 
 /**
  * Outreach to properties on the marketing list.
@@ -370,6 +370,19 @@ export const overview = query({
   },
 });
 
+/**
+ * Companies and owners that must never get outreach (the sender's own firm and
+ * contacts). Matched against the owner, management company, property name and
+ * address domain. Set OUTREACH_EXCLUDE to a comma-separated list to add more.
+ */
+function excluded(p: Pick<Doc<"prospects">, "name" | "owner" | "management" | "contactEmail">) {
+  const terms = ["excelsa", ...(process.env.OUTREACH_EXCLUDE ?? "").split(",")]
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean);
+  const hay = [p.name, p.owner, p.management, p.contactEmail].filter(Boolean).join(" | ").toLowerCase();
+  return terms.some((t) => hay.includes(t));
+}
+
 async function isSuppressed(ctx: MutationCtx, email: string) {
   return !!(await ctx.db.query("outreachSuppressions").withIndex("by_email", (q) => q.eq("email", email)).first());
 }
@@ -383,7 +396,7 @@ export const approve = mutation({
     let approved = 0;
     for (const id of prospectIds) {
       const p = await ctx.db.get(id);
-      if (!p || p.seq || !p.contactEmail || (await isSuppressed(ctx, p.contactEmail))) continue;
+      if (!p || p.seq || !p.contactEmail || excluded(p) || (await isSuppressed(ctx, p.contactEmail))) continue;
       const others = await ctx.db.query("prospects").withIndex("by_email", (q) => q.eq("contactEmail", p.contactEmail)).collect();
       if (others.some((o) => o.seq)) continue; // that address is already in a sequence
       await ctx.db.patch(id, { seq: "active", seqStep: 0, seqNextAt: Date.now(), unsubToken: randomCode(24) });
@@ -456,7 +469,7 @@ function esc(s: string) {
 
 function render(paragraphs: string[], p: { name: string; contactEmail: string; unsubToken: string }) {
   const unsub = `${PUBLIC_SITE}/u/${p.unsubToken}`;
-  const signature = ["The AptReputation team", "contact@aptreputation.com", PUBLIC_SITE.replace(/^https?:\/\//, "")];
+  const signature = [SENDER.name, "AptReputation", SENDER.email, PUBLIC_SITE.replace(/^https?:\/\//, "")];
   const why = `You are receiving this because ${p.contactEmail} is published as a contact for ${p.name}. This is a business message from Apartment Reputation about our review-management service.`;
   const html = `<div style="font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1c2b3a;max-width:580px">
 ${paragraphs
@@ -493,6 +506,10 @@ export const due = internalMutation({
     for (const p of rows) {
       if (!p.contactEmail || !p.unsubToken || (await isSuppressed(ctx, p.contactEmail))) {
         await ctx.db.patch(p._id, { seq: "stopped", seqNextAt: undefined, stopReason: "no usable address" });
+        continue;
+      }
+      if (excluded(p)) {
+        await ctx.db.patch(p._id, { seq: "stopped", seqNextAt: undefined, stopReason: "on the do-not-contact list" });
         continue;
       }
       // Claim it for an hour so an overlapping run cannot send it twice.
@@ -556,9 +573,9 @@ async function deliver(p: Sendable, step: number, to: string, test: boolean) {
       method: "POST",
       headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: process.env.OUTREACH_FROM ?? "AptReputation <contact@aptreputation.com>",
+        from: process.env.OUTREACH_FROM ?? `${SENDER.name} <${SENDER.email}>`,
         to: [to],
-        reply_to: process.env.OUTREACH_REPLY_TO ?? "contact@aptreputation.com",
+        reply_to: process.env.OUTREACH_REPLY_TO ?? SENDER.email,
         subject,
         html,
         text,

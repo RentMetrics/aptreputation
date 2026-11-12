@@ -96,6 +96,11 @@ its management company, owner, units and office phone (`convex/prospects.ts`).
    `OUTREACH_DAILY_CAP` (default 40) a day. Follow-ups go 4 and 9 days after the first.
    Marking a property replied, signed up or skip stops its sequence.
 
+Emails come from a named person (`SENDER` in `convex/lib/outreachCopy.ts`) and replies go to
+that mailbox, so it has to exist and be read. Anything matching "excelsa" or a term in
+`OUTREACH_EXCLUDE` (owner, management company, property name or email domain) can't be
+approved or sent to.
+
 Every email carries the postal address, the reason it was sent and an unsubscribe link
 (`/u/<token>`, plus one-click `List-Unsubscribe`). Unsubscribes, bounces and spam
 complaints suppress the address permanently. Keep these: they are what CAN-SPAM requires.

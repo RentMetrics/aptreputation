@@ -7,6 +7,9 @@
 export const PUBLIC_SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aptreputation.com").replace(/\/$/, "");
 export const POSTAL_ADDRESS = "Apartment Reputation, 30 E Broadway, Suite 203 #1053, Salt Lake City, UT 84111";
 
+/** The person outreach comes from. Replies go to this mailbox, so it must exist and be read. */
+export const SENDER = { name: "Curtis Holder", email: "curtis@aptreputation.com" };
+
 export type PitchInput = {
   name: string;
   city: string;
@@ -68,7 +71,7 @@ export function sequence(p: PitchInput): SequenceEmail[] {
       subject: first.subject,
       paragraphs: [
         `Hello,`,
-        first.text,
+        `I'm ${SENDER.name} with AptReputation. ${first.text}`,
         `Here is a free look at what residents are saying about ${p.name}. It reads your newest Google reviews and lists what they praise and what they raise:`,
         link,
         `If someone else looks after reviews for ${p.name}, I'd be grateful if you passed this along.`,
@@ -89,7 +92,7 @@ export function sequence(p: PitchInput): SequenceEmail[] {
         `Hello,`,
         `This is my last note about ${p.name}. If raising the Google rating is on your list this year, the free audit is here whenever it's useful:`,
         link,
-        `And if this isn't relevant, no reply needed. You won't hear from us again about this property.`,
+        `And if this isn't relevant, no reply needed. You won't hear from me again about this property.`,
       ],
     },
   ];

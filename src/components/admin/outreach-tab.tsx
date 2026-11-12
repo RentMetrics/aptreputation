@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api"
 import { Doc, Id } from "@/convex/_generated/dataModel"
 import { Button } from "@/components/ui/button"
 import { errorMessage, formatDate, timeAgo } from "@/lib/format"
-import { sequence } from "@/lib/pitch"
+import { SENDER, sequence } from "@/lib/pitch"
 
 type Prospect = Doc<"prospects">
 
@@ -29,8 +29,9 @@ function Preview({ p }: { p: Prospect }) {
         </div>
       ))}
       <p className="md:col-span-3 text-xs text-slate-500">
-        Each email is signed &ldquo;The AptReputation team&rdquo; and ends with why they received it, your postal address
-        and an unsubscribe link. Replies go to contact@aptreputation.com.
+        Each email comes from {SENDER.name} ({SENDER.email}), where replies also go, and ends with why they received
+        it, your postal address and an unsubscribe link. Properties owned or managed by Excelsa, and anything on the
+        do-not-contact list, are never sent to.
       </p>
     </div>
   )
