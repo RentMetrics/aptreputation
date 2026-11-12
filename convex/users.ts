@@ -19,7 +19,20 @@ export const ensure = mutation({
     const email = identity.email ?? "";
     // Only a verified email can grant the admin role.
     const role = email && identity.emailVerified && isAdminEmail(email) ? "admin" : "customer";
-    const existing = await getUser(ctx);
+    let existing = await getUser(ctx);
+    // Sign-in moved to a new Clerk instance (Nov 2026). An account created on the
+    // old one is picked up by its verified email, so its properties, trial and
+    // subscription carry over instead of being orphaned behind a duplicate.
+    const issuer = process.env.CLERK_JWT_ISSUER_DOMAIN ?? "";
+    if (!existing && email && identity.emailVerified && issuer) {
+      const legacy = (await ctx.db.query("users").collect()).find(
+        (u) => u.email.toLowerCase() === email.toLowerCase() && !u.tokenIdentifier.startsWith(issuer),
+      );
+      if (legacy) {
+        await ctx.db.patch(legacy._id, { tokenIdentifier: identity.tokenIdentifier });
+        existing = { ...legacy, tokenIdentifier: identity.tokenIdentifier };
+      }
+    }
     let userId = existing?._id;
     if (existing) {
       if (existing.role !== role || existing.email !== email) {
