@@ -144,7 +144,11 @@ export const setOutreach = mutation({
   },
   handler: async (ctx, { prospectId, outreach, note }) => {
     await requireAdmin(ctx);
+    const p = await ctx.db.get(prospectId);
+    // Marking someone replied, signed up or skip ends their email sequence.
+    const stop = outreach && outreach !== "contacted" && p?.seq === "active";
     await ctx.db.patch(prospectId, {
+      ...(stop ? { seq: "stopped" as const, seqNextAt: undefined, stopReason: outreach } : {}),
       ...(outreach !== undefined ? { outreach: outreach ?? undefined } : {}),
       ...(note !== undefined ? { note: note.trim().slice(0, 500) || undefined } : {}),
     });
@@ -161,31 +165,51 @@ async function groupName(ctx: QueryCtx, kind: "metro" | "state" | "management", 
   return g?.name ?? key;
 }
 
+async function createRatingJob(
+  ctx: MutationCtx,
+  kind: "all" | "metro" | "state" | "management",
+  key: string | undefined,
+  limit: number,
+) {
+  if (!Number.isInteger(limit) || limit < 1 || limit > MAX_PER_JOB) {
+    throw new ConvexError(`Choose between 1 and ${MAX_PER_JOB} properties per run.`);
+  }
+  const latest = await ctx.db.query("ratingJobs").withIndex("by_started").order("desc").first();
+  if (latest?.status === "running") throw new ConvexError("A rating run is already in progress.");
+  const first = await scoped(ctx, kind, key, "new").first();
+  if (!first) throw new ConvexError("Every property in this group has already been looked up.");
+  const jobId = await ctx.db.insert("ratingJobs", {
+    scopeKind: kind,
+    scopeKey: key,
+    scopeName: kind === "all" ? "All properties" : await groupName(ctx, kind, key!),
+    limit,
+    done: 0,
+    rated: 0,
+    noMatch: 0,
+    status: "running",
+    startedAt: Date.now(),
+  });
+  await ctx.scheduler.runAfter(0, internal.prospects.runJob, { jobId });
+  return jobId;
+}
+
 export const startRating = mutation({
   args: { ...scope, limit: v.number() },
   handler: async (ctx, { kind, key, limit }) => {
     await requireAdmin(ctx);
-    if (!Number.isInteger(limit) || limit < 1 || limit > MAX_PER_JOB) {
-      throw new ConvexError(`Choose between 1 and ${MAX_PER_JOB} properties per run.`);
-    }
-    const latest = await ctx.db.query("ratingJobs").withIndex("by_started").order("desc").first();
-    if (latest?.status === "running") throw new ConvexError("A rating run is already in progress.");
-    const first = await scoped(ctx, kind, key, "new").first();
-    if (!first) throw new ConvexError("Every property in this group has already been looked up.");
-    const jobId = await ctx.db.insert("ratingJobs", {
-      scopeKind: kind,
-      scopeKey: key,
-      scopeName: kind === "all" ? "All properties" : await groupName(ctx, kind, key!),
-      limit,
-      done: 0,
-      rated: 0,
-      noMatch: 0,
-      status: "running",
-      startedAt: Date.now(),
-    });
-    await ctx.scheduler.runAfter(0, internal.prospects.runJob, { jobId });
-    return jobId;
+    return await createRatingJob(ctx, kind, key, limit);
   },
+});
+
+/** Same, from the command line: `npx convex run prospects:startRatingCli '{...}'`. */
+export const startRatingCli = internalMutation({
+  args: { ...scope, limit: v.number() },
+  handler: async (ctx, { kind, key, limit }) => await createRatingJob(ctx, kind, key, limit),
+});
+
+export const jobStatus = internalQuery({
+  args: {},
+  handler: async (ctx) => await ctx.db.query("ratingJobs").withIndex("by_started").order("desc").first(),
 });
 
 export const stopRating = mutation({
@@ -233,6 +257,7 @@ export const saveBatch = internalMutation({
         name: v.optional(v.string()),
         rating: v.optional(v.number()),
         totalReviews: v.optional(v.number()),
+        website: v.optional(v.string()),
       }),
     ),
     error: v.optional(v.string()),
@@ -252,6 +277,7 @@ export const saveBatch = internalMutation({
         googleName: r.name,
         googleRating: r.rating,
         googleReviews: r.totalReviews ?? (r.placeId ? 0 : undefined),
+        website: r.website,
         ratedAt: Date.now(),
       });
       if (status === "rated") {
@@ -286,6 +312,7 @@ export const runJob = internalAction({
       name?: string;
       rating?: number;
       totalReviews?: number;
+      website?: string;
     }[] = [];
     let error: string | undefined;
     // Five at a time keeps well inside Google's per-minute quota.
@@ -293,7 +320,14 @@ export const runJob = internalAction({
       const settled = await Promise.allSettled(
         next.rows.slice(i, i + 5).map(async (p) => {
           const m = await matchProspect(p);
-          return { prospectId: p._id, placeId: m?.placeId, name: m?.name, rating: m?.rating, totalReviews: m?.totalReviews };
+          return {
+            prospectId: p._id,
+            placeId: m?.placeId,
+            name: m?.name,
+            rating: m?.rating,
+            totalReviews: m?.totalReviews,
+            website: m?.website,
+          };
         }),
       );
       for (const s of settled) {

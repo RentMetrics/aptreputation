@@ -82,6 +82,29 @@ its management company, owner, units and office phone (`convex/prospects.ts`).
   (`src/lib/pitch.ts`) and a link that opens that property's free audit
   (`/?audit=<name and city>`).
 
+### Outreach (`convex/outreach.ts`, Admin → Outreach)
+
+1. **Look up ratings** for a metro. Each lookup also stores the property's own website.
+2. **Find contact emails** reads that website (home page, then one contact page) for an
+   address it publishes. Nothing is guessed. Addresses that feed a leasing CRM or chatbot,
+   template placeholders and strings from page scripts are rejected; sites that block
+   crawlers or disallow them in robots.txt are left alone.
+3. **Review and approve.** An admin previews the three emails (copy in
+   `convex/lib/outreachCopy.ts`), can send themselves a test, and approves each property.
+   Nothing is sent to a property that has not been approved.
+4. **Sending.** A 15-minute cron sends due emails on weekdays 9am to 4pm Central, up to
+   `OUTREACH_DAILY_CAP` (default 40) a day. Follow-ups go 4 and 9 days after the first.
+   Marking a property replied, signed up or skip stops its sequence.
+
+Every email carries the postal address, the reason it was sent and an unsubscribe link
+(`/u/<token>`, plus one-click `List-Unsubscribe`). Unsubscribes, bounces and spam
+complaints suppress the address permanently. Keep these: they are what CAN-SPAM requires.
+
+Sending is **off** unless `OUTREACH_LIVE=on` is set on the deployment. With
+`OUTREACH_TEST_TO=<address>` instead, every email goes to that address. For bounces and
+complaints, add a Resend webhook to `https://<deployment>.convex.site/resend/webhook`
+(events `email.bounced`, `email.complained`) and set `RESEND_WEBHOOK_SECRET`.
+
 ### Review-request rules (do not remove)
 
 Everyone is sent to the same Google form. No pre-screening by sentiment and no

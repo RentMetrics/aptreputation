@@ -207,6 +207,7 @@ export type ProspectMatch = {
   name: string;
   rating?: number;
   totalReviews?: number;
+  website?: string;
 };
 
 const NAME_NOISE = new Set([
@@ -262,7 +263,7 @@ export async function matchProspect(p: ProspectLookup): Promise<ProspectMatch | 
   const res = await fetch(`${PLACES_NEW}/places/${encodeURIComponent(id)}`, {
     headers: {
       "X-Goog-Api-Key": mapsKey(),
-      "X-Goog-FieldMask": "id,displayName,formattedAddress,location,rating,userRatingCount",
+      "X-Goog-FieldMask": "id,displayName,formattedAddress,location,rating,userRatingCount,websiteUri",
     },
   });
   const place = await res.json();
@@ -278,5 +279,11 @@ export async function matchProspect(p: ProspectLookup): Promise<ProspectMatch | 
     ok = sameName && (place.formattedAddress ?? "").toLowerCase().includes(p.city.toLowerCase());
   }
   if (!ok) return null;
-  return { placeId: place.id, name: foundName, rating: place.rating, totalReviews: place.userRatingCount };
+  return {
+    placeId: place.id,
+    name: foundName,
+    rating: place.rating,
+    totalReviews: place.userRatingCount,
+    website: place.websiteUri,
+  };
 }

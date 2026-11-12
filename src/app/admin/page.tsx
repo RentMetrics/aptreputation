@@ -6,6 +6,7 @@ import { useConvexAuth, useQuery } from "convex/react"
 import { ArrowLeft } from "lucide-react"
 import { api } from "@/convex/_generated/api"
 import { CardsTab } from "@/components/admin/cards-tab"
+import { OutreachTab } from "@/components/admin/outreach-tab"
 import { ProspectsTab } from "@/components/admin/prospects-tab"
 import { AccountsTab, LeadsTab, PropertiesTab } from "@/components/admin/tracker-tabs"
 
@@ -14,6 +15,7 @@ const TABS = [
   ["properties", "Properties"],
   ["cards", "NFC cards"],
   ["prospects", "Marketing list"],
+  ["outreach", "Outreach"],
   ["leads", "Audit leads"],
 ] as const
 type Tab = (typeof TABS)[number][0]
@@ -76,6 +78,7 @@ export default function AdminPage() {
         {tab === "properties" && overview && <PropertiesTab properties={overview.properties} />}
         {tab === "cards" && <CardsTab properties={overview?.properties ?? []} />}
         {tab === "prospects" && <ProspectsTab />}
+        {tab === "outreach" && <OutreachTab />}
         {tab === "leads" && overview && <LeadsTab leads={overview.leads} />}
       </div>
     </main>

@@ -276,8 +276,25 @@ export default defineSchema({
     ratedAt: v.optional(v.number()),
     outreach: v.optional(outreachStatus),
     note: v.optional(v.string()),
+    // Outreach: the property's own website (from Google), and a contact email
+    // published on it. contactStatus is unset until the site has been checked.
+    website: v.optional(v.string()),
+    contactStatus: v.optional(v.union(v.literal("found"), v.literal("none"), v.literal("error"))),
+    contactEmail: v.optional(v.string()),
+    contactSource: v.optional(v.string()), // page the address was published on
+    contactCheckedAt: v.optional(v.number()),
+    // Email sequence. Unset = never approved. An admin approves each property.
+    seq: v.optional(v.union(v.literal("active"), v.literal("done"), v.literal("stopped"))),
+    seqStep: v.optional(v.number()), // emails sent so far
+    seqNextAt: v.optional(v.number()),
+    stopReason: v.optional(v.string()),
+    unsubToken: v.optional(v.string()),
   })
     .index("by_source", ["sourceId"])
+    .index("by_metro_contact", ["metro", "contactStatus"])
+    .index("by_seq", ["seq", "seqNextAt"])
+    .index("by_email", ["contactEmail"])
+    .index("by_token", ["unsubToken"])
     .index("by_status", ["rateStatus", "googleRating"])
     .index("by_metro", ["metro", "rateStatus", "googleRating"])
     .index("by_state", ["state", "rateStatus", "googleRating"])
@@ -311,6 +328,39 @@ export default defineSchema({
     startedAt: v.number(),
     finishedAt: v.optional(v.number()),
   }).index("by_started", ["startedAt"]),
+
+  // A run that looks for a published contact email on each property website.
+  contactJobs: defineTable({
+    metro: v.string(),
+    limit: v.number(),
+    done: v.number(),
+    found: v.number(),
+    status: v.union(v.literal("running"), v.literal("done"), v.literal("stopped"), v.literal("failed")),
+    error: v.optional(v.string()),
+    startedAt: v.number(),
+    finishedAt: v.optional(v.number()),
+  }).index("by_started", ["startedAt"]),
+
+  // Every outreach email sent.
+  outreachSends: defineTable({
+    prospectId: v.id("prospects"),
+    step: v.number(),
+    to: v.string(),
+    subject: v.string(),
+    resendId: v.optional(v.string()),
+    test: v.boolean(),
+    at: v.number(),
+  })
+    .index("by_at", ["at"])
+    .index("by_prospect", ["prospectId"])
+    .index("by_resend", ["resendId"]),
+
+  // Addresses that must never be emailed again (unsubscribed, bounced, complained).
+  outreachSuppressions: defineTable({
+    email: v.string(),
+    reason: v.string(),
+    at: v.number(),
+  }).index("by_email", ["email"]),
 
   usage: defineTable({
     key: v.string(), // e.g. "audit:2026-11-10"
