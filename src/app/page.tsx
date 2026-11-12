@@ -405,7 +405,7 @@ export default function Home() {
               <p className="text-sm text-slate-600">
                 This check reads the {audit.sampleSize} newest reviews Google shows publicly
                 {audit.recentNegative > 0 ? `, ${audit.recentNegative} of them 1 or 2 stars` : ""}.
-                A free trial loads all {audit.totalReviews} once you connect your Business Profile.
+                A free trial tracks every new review from the day you join, drafts replies, and shows what to fix first.
               </p>
               <Button asChild className="h-11"><Link href="/sign-up">Start free trial</Link></Button>
               {leadState === "saved" ? (

@@ -214,7 +214,7 @@ export const auditSummary = internalAction({
     try {
       return await ask(
         AuditSchema,
-        `You summarize the most recent public Google reviews of an apartment community for its manager. Work only from the reviews given. summary: two sentences. praised and concerns: up to 3 short phrases each, empty if none. Do not give percentages.`,
+        `You summarize the most recent public Google reviews of an apartment community for its manager. Work only from the reviews given. summary: two sentences. praised and concerns: up to 3 short phrases each, empty if none. Do not give percentages. This summary is shown publicly, so never name a person: write "a manager" or "the maintenance team" instead of a staff member's or reviewer's name.`,
         `Community: ${name}\n\n${reviews.map((r) => `<review stars="${r.rating}">\n${r.text}\n</review>`).join("\n\n")}`,
         2000,
       );
