@@ -31,18 +31,27 @@ function isResidential(types: string[] | undefined, name: string) {
 }
 
 async function placesNew(path: string, body: unknown, fieldMask?: string) {
-  const res = await fetch(`${PLACES_NEW}/${path}`, {
-    method: "POST",
-    headers: {
-      "X-Goog-Api-Key": mapsKey(),
-      "Content-Type": "application/json",
-      ...(fieldMask ? { "X-Goog-FieldMask": fieldMask } : {}),
-    },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new ConvexError(`Google Places search failed: ${data?.error?.message ?? res.status}`);
-  return data;
+  // Google now and then answers 500 or 503 ("The service is currently
+  // unavailable"). One short retry clears nearly all of them.
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(`${PLACES_NEW}/${path}`, {
+      method: "POST",
+      headers: {
+        "X-Goog-Api-Key": mapsKey(),
+        "Content-Type": "application/json",
+        ...(fieldMask ? { "X-Goog-FieldMask": fieldMask } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) return data;
+    if (res.status >= 500 && attempt < 2) {
+      await new Promise((resolve) => setTimeout(resolve, 600 * (attempt + 1)));
+      continue;
+    }
+    if (res.status >= 500) throw new ConvexError("Google is not answering right now. Please try again in a minute.");
+    throw new ConvexError(`Google Places search failed: ${data?.error?.message ?? res.status}`);
+  }
 }
 
 /**
