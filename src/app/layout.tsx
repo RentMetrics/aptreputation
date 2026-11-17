@@ -18,6 +18,21 @@ const body = Instrument_Sans({
 export const metadata: Metadata = {
   title: "AptReputation (Apartment Reputation): Google review management for apartment communities",
   description: "Reply to every Google review, earn more of them with tap cards, see what residents are saying, and track your rating from the day you join.",
+  metadataBase: new URL("https://www.aptreputation.com"),
+  openGraph: {
+    type: "website",
+    url: "https://www.aptreputation.com",
+    siteName: "AptReputation",
+    title: "Raise your community's Google rating. Then prove it.",
+    description: "Check any apartment community's Google reviews free, then answer every review and earn more of them.",
+    images: [{ url: "/aptreputation-og.png", width: 1200, height: 630, alt: "AptReputation: raise your community's Google rating" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Raise your community's Google rating. Then prove it.",
+    description: "Check any apartment community's Google reviews free, then answer every review and earn more of them.",
+    images: ["/aptreputation-og.png"],
+  },
   icons: {
     icon: [
       {

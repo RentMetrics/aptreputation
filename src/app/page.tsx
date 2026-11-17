@@ -235,6 +235,44 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Why it matters: the stakes, with the source named */}
+      <section className="bg-white border-b border-line">
+        <div className="max-w-6xl mx-auto px-5 py-16">
+          <h2 className="font-display text-3xl sm:text-4xl font-bold max-w-2xl">Renters read your reviews before they read your website</h2>
+          <div className="mt-10 grid gap-8 md:grid-cols-3">
+            <div className="border-t-2 border-ink pt-5">
+              <p className="font-display text-5xl font-extrabold text-brand">93%</p>
+              <p className="mt-3 text-slate-700 leading-relaxed">of U.S. apartment seekers used online reviews in their search.</p>
+            </div>
+            <div className="border-t-2 border-ink pt-5">
+              <p className="font-display text-5xl font-extrabold text-brand">64%</p>
+              <p className="mt-3 text-slate-700 leading-relaxed">said they would pay more for a highly rated or reviewed property.</p>
+            </div>
+            <div className="border-t-2 border-ink pt-5">
+              <p className="font-display text-2xl font-bold leading-tight">First thing they see</p>
+              <p className="mt-3 text-slate-700 leading-relaxed">
+                Your star rating sits beside your name in Google Search and Maps. A prospect sees it before a floor plan, a photo or a price.
+              </p>
+            </div>
+          </div>
+          <p className="mt-8 text-xs text-slate-500 max-w-3xl">
+            Survey figures: 2019 Renter Insight &amp; Digital Engagement survey of more than 1,100 renters, conducted by SurveyMonkey Audience for Binary Fountain,{" "}
+            <a
+              className="underline"
+              href="https://www.multifamilyexecutive.com/property-management/a-vast-majority-of-u-s-renters-use-online-ratings-and-reviews-in-apartment-search_o"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              reported by Multifamily Executive
+            </a>
+            .
+          </p>
+          <a href="#audit" className="mt-6 inline-block font-semibold text-brand underline underline-offset-4">
+            Check where your property stands, free
+          </a>
+        </div>
+      </section>
+
       {/* How it works: a real sequence, so it is numbered */}
       <section id="how" className="max-w-6xl mx-auto px-5 py-20">
         <h2 className="font-display text-3xl sm:text-4xl font-bold max-w-2xl">From your rating today to a better one, in four steps</h2>
@@ -394,11 +432,19 @@ export default function Home() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="font-semibold mb-1">Residents praise</p>
-                    <ul className="list-disc pl-5 text-slate-700">{audit.praised.map((p) => <li key={p}>{p}</li>)}</ul>
+                    {audit.praised.length > 0 ? (
+                      <ul className="list-disc pl-5 text-slate-700">{audit.praised.map((p) => <li key={p}>{p}</li>)}</ul>
+                    ) : (
+                      <p className="text-slate-500">Nothing in the newest reviews.</p>
+                    )}
                   </div>
                   <div>
                     <p className="font-semibold mb-1">Residents raise</p>
-                    <ul className="list-disc pl-5 text-slate-700">{audit.concerns.map((c) => <li key={c}>{c}</li>)}</ul>
+                    {audit.concerns.length > 0 ? (
+                      <ul className="list-disc pl-5 text-slate-700">{audit.concerns.map((c) => <li key={c}>{c}</li>)}</ul>
+                    ) : (
+                      <p className="text-slate-500">Nothing in the newest reviews.</p>
+                    )}
                   </div>
                 </div>
               )}
