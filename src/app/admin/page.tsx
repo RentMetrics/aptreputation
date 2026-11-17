@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react"
 import { api } from "@/convex/_generated/api"
 import { CardsTab } from "@/components/admin/cards-tab"
 import { OutreachTab } from "@/components/admin/outreach-tab"
+import { ScoreEmailTab } from "@/components/admin/score-email-tab"
 import { ProspectsTab } from "@/components/admin/prospects-tab"
 import { AccountsTab, LeadsTab, PropertiesTab } from "@/components/admin/tracker-tabs"
 
@@ -16,6 +17,7 @@ const TABS = [
   ["cards", "NFC cards"],
   ["prospects", "Marketing list"],
   ["outreach", "Outreach"],
+  ["score", "Score email"],
   ["leads", "Audit leads"],
 ] as const
 type Tab = (typeof TABS)[number][0]
@@ -79,6 +81,7 @@ export default function AdminPage() {
         {tab === "cards" && <CardsTab properties={overview?.properties ?? []} />}
         {tab === "prospects" && <ProspectsTab />}
         {tab === "outreach" && <OutreachTab />}
+        {tab === "score" && <ScoreEmailTab />}
         {tab === "leads" && overview && <LeadsTab leads={overview.leads} />}
       </div>
     </main>

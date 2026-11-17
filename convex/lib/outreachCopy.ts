@@ -97,3 +97,24 @@ export function sequence(p: PitchInput): SequenceEmail[] {
     },
   ];
 }
+
+/**
+ * Companies that must never get outreach: the sender's own firm and every group
+ * he works with. Matched as lowercase text against a property's owner,
+ * management company, name and contact address.
+ */
+export const NEVER_CONTACT = [
+  "excelsa",
+  "willow bridge",
+  "willowbridge",
+  "goldoller",
+  "rpm living",
+  "rpmliving",
+  "greystar",
+  "resprop",
+  "ross companies",
+  "rosscompanies",
+  "realty management services",
+  "tower 16",
+  "tower16",
+];

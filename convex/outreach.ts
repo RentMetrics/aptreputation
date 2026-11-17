@@ -4,7 +4,7 @@ import { ConvexError, v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { MutationCtx } from "./_generated/server";
 import { requireAdmin, randomCode } from "./lib/auth";
-import { POSTAL_ADDRESS, PUBLIC_SITE, SENDER, STEP_GAP_DAYS, sequence } from "./lib/outreachCopy";
+import { NEVER_CONTACT, POSTAL_ADDRESS, PUBLIC_SITE, SENDER, STEP_GAP_DAYS, sequence } from "./lib/outreachCopy";
 
 /**
  * Outreach to properties on the marketing list.
@@ -372,27 +372,12 @@ export const overview = query({
 
 /**
  * Companies and owners that must never get outreach: the sender's own firm and
- * every group he works with (ALWAYS_EXCLUDED). Matched against the owner, management company, property name and
+ * every group he works with (NEVER_CONTACT). Matched against the owner, management company, property name and
  * address domain. Set OUTREACH_EXCLUDE to a comma-separated list to add more.
  */
-const ALWAYS_EXCLUDED = [
-  "excelsa",
-  "willow bridge",
-  "willowbridge",
-  "goldoller",
-  "rpm living",
-  "rpmliving",
-  "greystar",
-  "resprop",
-  "ross companies",
-  "rosscompanies",
-  "realty management services",
-  "tower 16",
-  "tower16",
-];
 
 function excluded(p: Pick<Doc<"prospects">, "name" | "owner" | "management" | "contactEmail">) {
-  const terms = [...ALWAYS_EXCLUDED, ...(process.env.OUTREACH_EXCLUDE ?? "").split(",")]
+  const terms = [...NEVER_CONTACT, ...(process.env.OUTREACH_EXCLUDE ?? "").split(",")]
     .map((t) => t.trim().toLowerCase())
     .filter(Boolean);
   const hay = [p.name, p.owner, p.management, p.contactEmail].filter(Boolean).join(" | ").toLowerCase();

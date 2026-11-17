@@ -1,4 +1,5 @@
 // The outreach copy lives with the backend so the sender and the admin
 // preview can never drift apart.
-export { PUBLIC_SITE, SENDER, auditLink, pitch, sequence } from "@/convex/lib/outreachCopy"
+export { NEVER_CONTACT, PUBLIC_SITE, SENDER, auditLink, pitch, sequence } from "@/convex/lib/outreachCopy"
 export type { PitchInput, SequenceEmail } from "@/convex/lib/outreachCopy"
+export { reportSlug, scoreEmail } from "@/convex/lib/scoreEmail"
