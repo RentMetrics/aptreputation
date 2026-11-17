@@ -109,11 +109,11 @@ export type IncomingReview = {
   replyAt?: number;
 };
 
-export type PlaceDetails = Omit<PlaceHit, "isResidential"> & { reviews: IncomingReview[] };
+export type PlaceDetails = Omit<PlaceHit, "isResidential"> & { reviews: IncomingReview[]; location?: { lat: number; lng: number } };
 
 /** Public place details. Google returns at most 5 reviews here. */
 export async function placeDetails(placeId: string): Promise<PlaceDetails> {
-  const fields = "place_id,name,formatted_address,rating,user_ratings_total,reviews";
+  const fields = "place_id,name,formatted_address,rating,user_ratings_total,reviews,geometry";
   const res = await fetch(
     `${PLACES}/details/json?place_id=${encodeURIComponent(placeId)}&fields=${fields}&reviews_sort=newest&key=${mapsKey()}`,
   );
@@ -126,6 +126,10 @@ export async function placeDetails(placeId: string): Promise<PlaceDetails> {
     address: r.formatted_address,
     rating: r.rating,
     totalReviews: r.user_ratings_total,
+    location:
+      typeof r.geometry?.location?.lat === "number" && typeof r.geometry?.location?.lng === "number"
+        ? { lat: r.geometry.location.lat, lng: r.geometry.location.lng }
+        : undefined,
     reviews: (r.reviews ?? []).map((rv: any) => ({
       // Places has no review ID; author + timestamp is stable for a review.
       externalId: `${rv.author_url ?? rv.author_name}:${rv.time}`,
@@ -135,6 +139,57 @@ export async function placeDetails(placeId: string): Promise<PlaceDetails> {
       reviewDate: rv.time * 1000,
     })),
   };
+}
+
+export type NearbyCommunity = { placeId: string; name: string; rating: number; totalReviews: number; miles: number };
+
+function milesBetween(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLng = rad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 3958.8 * 2 * Math.asin(Math.sqrt(h));
+}
+
+/**
+ * Rated apartment communities around a point, nearest first. One Text Search
+ * call. A community needs at least 10 reviews to count, so a brand-new listing
+ * with two 5-star reviews does not set the bar for the neighbourhood.
+ */
+export async function nearbyCommunities(
+  center: { lat: number; lng: number },
+  excludePlaceId: string,
+  radiusMiles = 3,
+): Promise<NearbyCommunity[]> {
+  const search = (rankPreference: "DISTANCE" | "RELEVANCE") =>
+    placesNew(
+      "places:searchText",
+      {
+        textQuery: "apartments",
+        regionCode: "US",
+        pageSize: 20,
+        rankPreference,
+        locationBias: { circle: { center: { latitude: center.lat, longitude: center.lng }, radius: Math.round(radiusMiles * 1609.34) } },
+      },
+      "places.id,places.displayName,places.types,places.rating,places.userRatingCount,places.location",
+    );
+  const found = new Map<string, NearbyCommunity>();
+  const take = (data: any) => {
+    for (const p of data.places ?? []) {
+      const name: string = p.displayName?.text ?? "";
+      if (p.id === excludePlaceId || !name || !isResidential(p.types, name)) continue;
+      if (typeof p.rating !== "number" || (p.userRatingCount ?? 0) < 10) continue;
+      if (typeof p.location?.latitude !== "number" || typeof p.location?.longitude !== "number") continue;
+      const miles = milesBetween(center, { lat: p.location.latitude, lng: p.location.longitude });
+      if (miles > radiusMiles) continue;
+      found.set(p.id, { placeId: p.id, name, rating: p.rating, totalReviews: p.userRatingCount, miles: Math.round(miles * 10) / 10 });
+    }
+  };
+  take(await search("DISTANCE"));
+  // In towns full of small listings the nearest twenty can hold few real
+  // communities; a relevance-ranked search of the same area finds the rest.
+  if (found.size < 3) take(await search("RELEVANCE"));
+  return [...found.values()].sort((a, b) => a.miles - b.miles);
 }
 
 export function writeReviewUrl(placeId: string) {

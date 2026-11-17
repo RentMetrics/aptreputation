@@ -20,6 +20,15 @@ type Audit = {
   rating: number | null
   totalReviews: number
   score: number | null
+  parts?: { key: string; label: string; points: number; max: number; detail: string }[]
+  market?: {
+    radiusMiles: number
+    rank: number
+    of: number
+    averageRating: number
+    nearby: { placeId: string; name: string; rating: number; totalReviews: number; miles: number }[]
+  } | null
+  nextStep?: string | null
   sampleSize: number
   recentNegative: number
   summary: string | null
@@ -273,6 +282,38 @@ export default function Home() {
         </div>
       </section>
 
+      {/* The score: what goes into it, so anyone can check the number */}
+      <section id="score" className="max-w-6xl mx-auto px-5 pt-20">
+        <div className="grid gap-10 md:grid-cols-[1fr_1.2fr] items-start">
+          <div>
+            <h2 className="font-display text-3xl sm:text-4xl font-bold">The AptRep Score: a number your team can move</h2>
+            <p className="mt-4 text-slate-700 leading-relaxed">
+              One number out of 100 for how a community looks on Google today, and where it stands against the communities around it.
+              Every part is counted from the public listing, never judged, so the same listing always gets the same score and you can check it yourself.
+            </p>
+            <a href="#audit" className="mt-6 inline-block font-semibold text-brand underline underline-offset-4">
+              See your score, free
+            </a>
+          </div>
+          <dl className="grid gap-px bg-line border border-line rounded-2xl overflow-hidden">
+            {[
+              ["50", "Google rating", "Your star rating. One star scores nothing, five stars score all 50."],
+              ["20", "Standing nearby", "How your rating compares with rated apartment communities within three miles."],
+              ["15", "Review volume", "How many reviews you have. Full marks at 150 or more."],
+              ["15", "Newest reviews", "The share of your newest reviews rated 4 or 5 stars."],
+            ].map(([pts, name, text]) => (
+              <div key={name} className="bg-white p-5 grid grid-cols-[3.5rem_1fr] gap-4 items-baseline">
+                <dt className="font-display text-3xl font-extrabold text-brand tabular-nums">{pts}</dt>
+                <dd>
+                  <p className="font-semibold">{name}</p>
+                  <p className="text-sm text-slate-600 mt-1 leading-relaxed">{text}</p>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
+
       {/* How it works: a real sequence, so it is numbered */}
       <section id="how" className="max-w-6xl mx-auto px-5 py-20">
         <h2 className="font-display text-3xl sm:text-4xl font-bold max-w-2xl">From your rating today to a better one, in four steps</h2>
@@ -401,7 +442,7 @@ export default function Home() {
       </footer>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
           {error && (
             <DialogHeader>
               <DialogTitle>We couldn&apos;t run that check</DialogTitle>
@@ -422,9 +463,9 @@ export default function Home() {
                   <p className="text-sm text-slate-600 mt-1">{audit.totalReviews} reviews</p>
                 </div>
                 <div className="bg-slate-50 rounded-xl p-4">
-                  <p className="text-sm text-slate-600">AptReputation Score</p>
+                  <p className="text-sm text-slate-600">AptRep Score</p>
                   <p className="text-3xl font-bold tabular-nums">{audit.score ?? "–"}<span className="text-base font-normal text-slate-500"> / 100</span></p>
-                  <p className="text-xs text-slate-500 mt-1">Rating, review volume, and how the newest reviews rate you.</p>
+                  <p className="text-xs text-slate-500 mt-1">Rating, review volume, newest reviews, and standing among nearby communities.</p>
                 </div>
               </div>
               {audit.summary && <p className="text-slate-800">{audit.summary}</p>}
@@ -448,10 +489,58 @@ export default function Home() {
                   </div>
                 </div>
               )}
+              {audit.parts && audit.parts.length > 0 && (
+                <div>
+                  <p className="font-semibold text-sm mb-2">How the score is made up</p>
+                  <ul className="grid gap-2.5">
+                    {audit.parts.map((p) => (
+                      <li key={p.key} className="text-sm">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <span className="font-medium">{p.label}</span>
+                          <span className="tabular-nums text-slate-600">{p.points} of {p.max}</span>
+                        </div>
+                        <div className="mt-1 h-1.5 rounded-full bg-slate-200" aria-hidden="true">
+                          <div className="h-1.5 rounded-full bg-brand" style={{ width: `${Math.max(2, Math.min(100, (p.points / p.max) * 100))}%` }} />
+                        </div>
+                        <p className="mt-1 text-xs text-slate-500">{p.detail}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {audit.market && audit.rating !== null && (
+                <div>
+                  <p className="font-semibold text-sm mb-1">Where you stand nearby</p>
+                  <p className="text-sm text-slate-700">
+                    Ranked {audit.market.rank} of {audit.market.of} apartment communities within {audit.market.radiusMiles} miles by Google rating. The others average {audit.market.averageRating.toFixed(1)} stars.
+                  </p>
+                  <ol className="mt-2 divide-y divide-line border-y border-line text-sm">
+                    {[
+                      ...audit.market.nearby.map((n) => ({ id: n.placeId, name: n.name, rating: n.rating, reviews: n.totalReviews, self: false })),
+                      { id: "self", name: audit.name, rating: audit.rating, reviews: audit.totalReviews, self: true },
+                    ]
+                      .sort((a, b) => b.rating - a.rating || Number(b.self) - Number(a.self))
+                      .slice(0, 7)
+                      .map((row) => (
+                        <li key={row.id} className={`flex items-center justify-between gap-3 py-1.5 ${row.self ? "font-semibold text-ink" : "text-slate-700"}`}>
+                          <span className="truncate">{row.name}{row.self ? " (you)" : ""}</span>
+                          <span className="tabular-nums shrink-0">{row.rating.toFixed(1)} <span className="text-slate-500 font-normal">· {row.reviews.toLocaleString("en-US")}</span></span>
+                        </li>
+                      ))}
+                  </ol>
+                </div>
+              )}
+              {audit.nextStep && (
+                <div className="rounded-xl border border-line bg-slate-50 p-4">
+                  <p className="font-semibold text-sm mb-1">What would raise it most</p>
+                  <p className="text-sm text-slate-700">{audit.nextStep}</p>
+                </div>
+              )}
               <p className="text-sm text-slate-600">
                 This check reads the {audit.sampleSize} newest reviews Google shows publicly
                 {audit.recentNegative > 0 ? `, ${audit.recentNegative} of them 1 or 2 stars` : ""}.
                 A free trial tracks every new review from the day you join, drafts replies, and shows what to fix first.
+                Ratings and reviews are from Google.
               </p>
               <Button asChild className="h-11"><Link href="/sign-up">Start free trial</Link></Button>
               {leadState === "saved" ? (
