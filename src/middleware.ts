@@ -30,7 +30,8 @@ function shortDomainRedirect(request: NextRequest) {
     // keep the raw path
   }
   slug = slug.replace(/[-_+/]+/g, ' ').trim().slice(0, 200)
-  if (slug && slug !== 'score') target.searchParams.set('q', slug)
+  // 'lander' is the old parked page's address, which browsers that visited it may still request.
+  if (slug && slug !== 'score' && slug !== 'lander') target.searchParams.set('q', slug)
   request.nextUrl.searchParams.forEach((value, key) => {
     if (!target.searchParams.has(key)) target.searchParams.set(key, value)
   })
