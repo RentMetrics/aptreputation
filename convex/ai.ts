@@ -214,7 +214,13 @@ export const auditSummary = internalAction({
     try {
       return await ask(
         AuditSchema,
-        `You summarize the most recent public Google reviews of an apartment community for its manager. Work only from the reviews given. summary: two sentences. praised and concerns: up to 3 short phrases each, empty if none. Do not give percentages. This summary is shown publicly, so never name a person: write "a manager" or "the maintenance team" instead of a staff member's or reviewer's name.`,
+        `You summarize the most recent public Google reviews of an apartment community for its owner or manager. They are seeing this for the first time and did not ask for it, so be calm, fair and constructive. Work only from the reviews given.
+
+summary: two sentences. The first gives the overall picture across these reviews and starts with what residents value whenever any review is positive. The second names the main thing residents raise as a theme the team can act on, such as "maintenance response times" or "move-out charges". Do not repeat accusations, incidents or graphic detail, and do not call the reviews or the community negative, bad or poor. If every review is critical, say that the newest reviews raise concerns and name the themes.
+
+praised and concerns: up to 3 phrases each, empty if none. Keep each to a neutral theme of two to five words, for example "safety concerns" rather than a description of an incident.
+
+Do not give percentages. This summary is shown publicly, so never name a person: write "a manager" or "the maintenance team" instead of a staff member's or reviewer's name.`,
         `Community: ${name}\n\n${reviews.map((r) => `<review stars="${r.rating}">\n${r.text}\n</review>`).join("\n\n")}`,
         2000,
       );

@@ -371,12 +371,28 @@ export const overview = query({
 });
 
 /**
- * Companies and owners that must never get outreach (the sender's own firm and
- * contacts). Matched against the owner, management company, property name and
+ * Companies and owners that must never get outreach: the sender's own firm and
+ * every group he works with (ALWAYS_EXCLUDED). Matched against the owner, management company, property name and
  * address domain. Set OUTREACH_EXCLUDE to a comma-separated list to add more.
  */
+const ALWAYS_EXCLUDED = [
+  "excelsa",
+  "willow bridge",
+  "willowbridge",
+  "goldoller",
+  "rpm living",
+  "rpmliving",
+  "greystar",
+  "resprop",
+  "ross companies",
+  "rosscompanies",
+  "realty management services",
+  "tower 16",
+  "tower16",
+];
+
 function excluded(p: Pick<Doc<"prospects">, "name" | "owner" | "management" | "contactEmail">) {
-  const terms = ["excelsa", ...(process.env.OUTREACH_EXCLUDE ?? "").split(",")]
+  const terms = [...ALWAYS_EXCLUDED, ...(process.env.OUTREACH_EXCLUDE ?? "").split(",")]
     .map((t) => t.trim().toLowerCase())
     .filter(Boolean);
   const hay = [p.name, p.owner, p.management, p.contactEmail].filter(Boolean).join(" | ").toLowerCase();

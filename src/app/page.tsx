@@ -151,7 +151,7 @@ export default function Home() {
           <nav className="flex items-center gap-1 sm:gap-2" aria-label="Site">
             <a href="#how" className="hidden sm:block px-3 py-2 text-sm font-medium text-muted hover:text-ink">How it works</a>
             <a href="#pricing" className="hidden sm:block px-3 py-2 text-sm font-medium text-muted hover:text-ink">Pricing</a>
-            <Link href="/sign-in" className="px-3 py-2 text-sm font-medium text-muted hover:text-ink">Sign in</Link>
+            <Link href="/sign-in" className="px-3 py-2 text-sm font-medium text-muted hover:text-ink whitespace-nowrap">Sign in</Link>
             <Button asChild><Link href="/sign-up">Start free trial</Link></Button>
           </nav>
         </div>
