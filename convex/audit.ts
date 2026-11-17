@@ -126,13 +126,17 @@ function nextStepOf(parts: ScorePart[], total: number, market: Market | null): s
     ],
     [
       room("market"),
-      market
+      // Nothing to pass when this community already has the highest rating nearby.
+      market && market.rank > 1
         ? `Communities within ${market.radiusMiles} miles average ${market.averageRating.toFixed(1)} stars. Passing the ones just above you is what moves this part.`
         : "",
     ],
   ];
   const best = options.filter(([gap, text]) => gap >= 1.5 && text).sort((a, b) => b[0] - a[0])[0];
-  return best ? best[1] : "This listing is close to full marks. Keep replying to every review and asking for new ones so it stays there.";
+  if (best) return best[1];
+  return market?.rank === 1
+    ? "This community has the highest Google rating nearby. Keep replying to every review and asking for new ones so it stays there."
+    : "This listing is close to full marks. Keep replying to every review and asking for new ones so it stays there.";
 }
 
 export const cached = internalQuery({
