@@ -153,11 +153,11 @@ export function AuditResultBody({ audit, signUpHref = "/sign-up" }: { audit: Aud
         A free trial tracks every new review from the day you join, drafts replies, and shows what to fix first.
         Ratings and reviews are from Google.
       </p>
-      <Button asChild className="h-11"><Link href={signUpHref}>Start free trial</Link></Button>
+      <Button asChild className="h-11 print:hidden"><Link href={signUpHref}>Start free trial</Link></Button>
       {leadState === "saved" ? (
         <p className="text-sm text-emerald-800" role="status">Thanks. We&apos;ll be in touch about {audit.name}.</p>
       ) : (
-        <form onSubmit={sendLead} className="border-t pt-4">
+        <form onSubmit={sendLead} className="border-t pt-4 print:hidden">
           <label htmlFor="lead-email" className="text-sm font-medium">Not ready? Have us follow up about this property.</label>
           <div className="flex gap-2 mt-2">
             <Input id="lead-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" />

@@ -4,12 +4,17 @@ import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useAction } from "convex/react"
-import { Search } from "lucide-react"
+import { Printer, Search } from "lucide-react"
 import { api } from "@/convex/_generated/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { AuditResultBody, type Audit } from "@/components/audit-result"
 import { errorMessage } from "@/lib/format"
+
+/** "Bridgeside Landing Taylorsville UT" -> "bridgeside-landing-taylorsville-ut", the short-link form. */
+function reportSlug(text: string) {
+  return text.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+}
 
 const PARTS: [string, string, string][] = [
   ["50", "Google rating", "Your star rating. Five stars score all 50."],
@@ -65,7 +70,15 @@ export default function ScorePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      <header className="border-b border-line">
+      {/* Printing gives a one-page report: just the result, with its own heading and footer. */}
+      <style>{`
+        @media print {
+          @page { size: letter; margin: 0.45in; }
+          body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .score-report { zoom: 0.68; }
+        }
+      `}</style>
+      <header className="border-b border-line print:hidden">
         <div className="max-w-5xl mx-auto px-5 h-16 flex items-center justify-between">
           <Link href="/" aria-label="AptReputation home">
             <Image src="/apt-reputation-logo-full-md.png" alt="APT Reputation" width={160} height={42} className="h-9 w-auto" priority />
@@ -78,7 +91,7 @@ export default function ScorePage() {
       </header>
 
       <main className="flex-1">
-        <section className="bg-ink text-white">
+        <section className="bg-ink text-white print:hidden">
           <div className="max-w-3xl mx-auto px-5 py-16 sm:py-20">
             <p className="text-sm font-semibold uppercase tracking-wide text-white/70">AptRep Score</p>
             <h1 className="mt-3 font-display font-extrabold text-[2.5rem] leading-[1.05] sm:text-6xl tracking-tight">
@@ -114,7 +127,7 @@ export default function ScorePage() {
 
         <div ref={resultRef} className="scroll-mt-4">
           {(audit || error) && (
-            <section className="max-w-3xl mx-auto px-5 py-12" aria-live="polite">
+            <section className="score-report max-w-3xl mx-auto px-5 py-12 print:max-w-none print:p-0" aria-live="polite">
               {error && (
                 <div className="rounded-2xl border border-line p-6">
                   <h2 className="font-display text-2xl font-bold">We couldn&apos;t run that check</h2>
@@ -122,19 +135,43 @@ export default function ScorePage() {
                 </div>
               )}
               {audit && (
-                <div className="rounded-2xl border border-line p-6 sm:p-8 grid gap-5">
-                  <div>
-                    <h2 className="font-display text-2xl sm:text-3xl font-bold">{audit.name}</h2>
-                    <p className="mt-1 text-slate-600">{audit.address}</p>
+                <>
+                  <div className="mb-4 flex justify-end print:hidden">
+                    <Button type="button" variant="outline" onClick={() => window.print()}>
+                      <Printer className="h-4 w-4" /> Print or save as PDF
+                    </Button>
                   </div>
-                  <AuditResultBody audit={audit} />
-                </div>
+                  <div className="rounded-2xl border border-line p-6 sm:p-8 grid gap-5 print:border-0 print:p-0">
+                    <div className="hidden print:flex items-end justify-between border-b border-line pb-3">
+                      <Image src="/apt-reputation-logo-full-md.png" alt="AptReputation" width={160} height={42} className="h-9 w-auto" />
+                      <p className="text-sm text-slate-600">
+                        AptRep Score report · {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                      </p>
+                    </div>
+                    <div>
+                      <h2 className="font-display text-2xl sm:text-3xl font-bold">{audit.name}</h2>
+                      <p className="mt-1 text-slate-600">{audit.address}</p>
+                    </div>
+                    <AuditResultBody audit={audit} />
+                    <div className="hidden print:block border-t border-line pt-3 text-sm text-slate-700">
+                      <p className="font-semibold text-ink">Raise this score with AptReputation.</p>
+                      <p className="mt-1">
+                        Your team replies to every review from one place, with a draft ready to edit, and earns new reviews with tap cards. 14 days free, no card
+                        needed: aptreputation.com
+                      </p>
+                      <p className="mt-2 text-xs text-slate-500">
+                        See this score live at aptrep.com/{reportSlug(query || audit.name)}. The AptRep Score is counted from the property&apos;s public Google listing.
+                        Apartment Reputation, 30 E Broadway, Suite 203 #1053, Salt Lake City, UT 84111.
+                      </p>
+                    </div>
+                  </div>
+                </>
               )}
             </section>
           )}
         </div>
 
-        <section className="max-w-3xl mx-auto px-5 py-14">
+        <section className="max-w-3xl mx-auto px-5 py-14 print:hidden">
           <h2 className="font-display text-2xl sm:text-3xl font-bold">What goes into the score</h2>
           <p className="mt-3 text-slate-700 leading-relaxed">
             Every part is counted from the public Google listing, never judged, so the same listing always gets the same score and you can check it yourself.
@@ -157,7 +194,7 @@ export default function ScorePage() {
         </section>
       </main>
 
-      <footer className="border-t border-line">
+      <footer className="border-t border-line print:hidden">
         <div className="max-w-5xl mx-auto px-5 py-6 text-sm text-slate-600 flex flex-wrap gap-x-4 gap-y-1">
           <span>© {new Date().getFullYear()} Apartment Reputation (AptReputation)</span>
           <Link href="/privacy" className="hover:text-ink">Privacy</Link>
