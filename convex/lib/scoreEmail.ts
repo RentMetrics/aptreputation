@@ -8,7 +8,7 @@
  */
 import { POSTAL_ADDRESS, SENDER } from "./outreachCopy";
 import { promoLine } from "./promo";
-import { labelOf, listOf, type AiSummary } from "./visibility";
+import { labelOf, listOf, marketOf, type AiSummary } from "./visibility";
 
 export type ScoreEmailInput = {
   name: string;
@@ -24,6 +24,7 @@ export type ScoreEmailInput = {
     nearby: { name: string; rating: number; totalReviews: number }[];
   } | null;
   nextStep?: string | null;
+  address?: string;
   /** How AI assistants answer renters about this property, when that check has been run for it. */
   ai?: AiSummary | null;
 };
@@ -51,6 +52,8 @@ function standings(a: ScoreEmailInput) {
 }
 
 export function scoreEmail(a: ScoreEmailInput, opts: { query: string; firstName?: string }) {
+  // With an AI search report, the email leads with what the assistants said.
+  if (a.ai) return aiSearchEmail(a, a.ai, opts);
   const first = opts.firstName?.trim();
   const hello = first ? `Hi ${first},` : "Hello,";
   const link = `aptrep.com/${reportSlug(opts.query)}`;
@@ -59,11 +62,8 @@ export function scoreEmail(a: ScoreEmailInput, opts: { query: string; firstName?
   const rows = standings(a);
   const m = a.market;
 
-  const ai = a.ai ?? null;
   const subject =
-    ai && a.score !== null
-      ? `${a.name}: AptRep Score ${a.score}, named in ${ai.shown} of ${ai.outOf} AI searches`
-      : a.score !== null
+    a.score !== null
       ? `${a.name}: AptRep Score ${a.score} of 100`
       : stars
         ? `${a.name} is rated ${stars} on Google`
@@ -76,20 +76,8 @@ export function scoreEmail(a: ScoreEmailInput, opts: { query: string; firstName?
   const standing = m && stars
     ? `By Google rating, ${a.name} ranks ${m.rank} of ${m.of} apartment communities within ${m.radiusMiles} miles. The others average ${m.averageRating.toFixed(1)} stars.`
     : null;
-  const close = `The full report, with what residents praise and raise in the newest reviews${ai ? " and each assistant's answer question by question" : ""}, is here: ${url}`;
-  const promo = promoLine(Date.now());
-  const offer = `AptReputation is how a community raises ${ai ? "both numbers" : "this number"}: ${
-    ai ? "a step-by-step fix plan for what the assistants get wrong, a fresh AI search check every month, " : ""
-  }an alert for each new review, a reply drafted and ready to edit, and tap cards that let your team ask a resident for a review on the spot. It is free for 14 days.${promo ? ` ${promo}` : ""}`;
-  // The AI search part: what the assistants said. The steps to fix it are for subscribers.
-  const aiIntro = ai
-    ? `Renters now ask AI assistants where to live, so I also asked ${listOf(ai.assistants.map((x) => x.label))} the questions renters ask about apartments nearby. They named ${a.name} in ${ai.shown} of ${ai.outOf} answers.`
-    : null;
-  const aiQuotes = ai
-    ? ai.byName.filter((b) => b.statedRating).slice(0, 3).map((b) => `Asked about ${a.name} by name, ${labelOf(b.assistant)} quoted ${b.statedRating}.`)
-    : [];
-  const aiFindings = ai ? ai.findings.slice(0, 3).map((f) => f.title) : [];
-  const aiInstead = ai && ai.competitors.length ? `Named most often instead: ${ai.competitors.slice(0, 4).map((c) => c.name).join(", ")}.` : null;
+  const close = `The full report, with what residents praise and raise in the newest reviews, is here: ${url}`;
+  const offer = `AptReputation is how a community raises this number: an alert for each new review, a reply drafted and ready to edit, and tap cards that let your team ask a resident for a review on the spot. It is free for 14 days.${promoLine(Date.now()) ? ` ${promoLine(Date.now())}` : ""}`;
   const optOut = `If this isn't useful, reply "no thanks" and I won't write again.`;
 
   // ---- plain text ----
@@ -104,11 +92,6 @@ export function scoreEmail(a: ScoreEmailInput, opts: { query: string; firstName?
     standing,
     rows.length ? rows.map((r) => `  ${r.rating.toFixed(1)}  ${r.name}${r.self ? " (you)" : ""}, ${count(r.reviews)}`).join("\n") : null,
     a.nextStep ? `What would raise it most: ${a.nextStep}` : null,
-    aiIntro,
-    ai ? ai.assistants.map((x) => `  ${x.label}: named in ${x.shown} of ${x.outOf}`).join("\n") : null,
-    aiQuotes.length ? aiQuotes.join("\n") : null,
-    aiInstead,
-    aiFindings.length ? `What is holding it back:\n${aiFindings.map((t) => `  - ${t}`).join("\n")}` : null,
     close,
     offer,
     `${SENDER.name}\nAptReputation\n${SENDER.email}`,
@@ -148,17 +131,6 @@ export function scoreEmail(a: ScoreEmailInput, opts: { query: string; firstName?
   const next = a.nextStep
     ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 14px;"><tr><td style="${font}border-left:3px solid #1554c0;background:#f1f5f9;padding:10px 14px;font-size:15px;line-height:22px;color:#1e293b;"><strong>What would raise it most</strong><br>${esc(a.nextStep)}</td></tr></table>`
     : "";
-  const aiBlock = ai
-    ? p(`<strong>How AI assistants answer renters</strong><br>${esc(aiIntro!)}`) +
-      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 14px;">` +
-      ai.assistants.map((x) => `<tr><td style="${cell}color:#1e293b;">${esc(x.label)}</td><td align="right" style="${cell}color:#475569;white-space:nowrap;">named in ${x.shown} of ${x.outOf}</td></tr>`).join("") +
-      `</table>` +
-      (aiQuotes.length ? p(aiQuotes.map(esc).join("<br>")) : "") +
-      (aiInstead ? p(esc(aiInstead)) : "") +
-      (aiFindings.length
-        ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 14px;"><tr><td style="${font}border-left:3px solid #1554c0;background:#f1f5f9;padding:10px 14px;font-size:15px;line-height:22px;color:#1e293b;"><strong>What is holding it back</strong><br>${aiFindings.map(esc).join("<br>")}</td></tr></table>`
-        : "")
-    : "";
   const html =
     `<div style="max-width:560px;">` +
     p(esc(hello)) +
@@ -168,11 +140,98 @@ export function scoreEmail(a: ScoreEmailInput, opts: { query: string; firstName?
     (standing ? p(esc(standing)) : "") +
     standingTable +
     next +
-    aiBlock +
-    p(`The full report, with what residents praise and raise in the newest reviews${ai ? " and each assistant's answer question by question" : ""}, is here: <a href="${url}" style="color:#1554c0;">${link}</a>`) +
+    p(`The full report, with what residents praise and raise in the newest reviews, is here: <a href="${url}" style="color:#1554c0;">${link}</a>`) +
     p(esc(offer)) +
     p(`${esc(SENDER.name)}<br>AptReputation<br>${esc(SENDER.email)}`) +
     `<p style="${font}font-size:12px;line-height:18px;color:#64748b;margin:18px 0 0;">${esc(optOut)}<br>${esc(POSTAL_ADDRESS)}</p>` +
+    `</div>`;
+
+  return { subject, html, text, link };
+}
+
+/**
+ * The AI search email: "Renters are asking ChatGPT where to live. What does it
+ * say about your property?" It reports what the assistants said about this one
+ * property, with the AptRep Score beside it. Every figure comes from the check
+ * we ran; the steps to fix what it found are kept for subscribers.
+ */
+function aiSearchEmail(a: ScoreEmailInput, ai: AiSummary, opts: { query: string; firstName?: string }) {
+  const first = opts.firstName?.trim();
+  const hello = first ? `Hi ${first},` : "Hello,";
+  const link = `aptrep.com/${reportSlug(opts.query)}`;
+  const url = `https://${link}`;
+  const market = a.address ? marketOf(a.address) : null;
+  const where = market ? `in ${market.city}` : "nearby";
+  const names = listOf(ai.assistants.map((x) => x.label));
+  const stars = a.rating?.toFixed(1) ?? null;
+
+  const subject = `What ChatGPT says about ${a.name}`;
+  const hook = `Renters are asking ChatGPT where to live. I wanted to see what it says about ${a.name}, so I asked ${names} the questions renters ask about apartments ${where}.`;
+  const result =
+    ai.shown === 0
+      ? `None of the ${ai.outOf} answers named ${a.name}.`
+      : `${a.name} was named in ${ai.shown} of ${ai.outOf} answers.`;
+  const quotes = ai.byName.filter((b) => b.statedRating).slice(0, 2).map((b) => `Asked about ${a.name} by name, ${labelOf(b.assistant)} quoted ${b.statedRating}.`);
+  const google = stars ? `On Google it has ${stars} stars from ${count(a.totalReviews)}${a.score !== null ? `, an AptRep Score of ${a.score} out of 100` : ""}.` : null;
+  const instead = ai.competitors.length ? `Named most often instead: ${ai.competitors.slice(0, 4).map((c) => c.name).join(", ")}.` : null;
+  const findings = ai.findings.slice(0, 3).map((f) => f.title);
+  const close = `The full report shows each question and which assistants named you: ${url}`;
+  const promo = promoLine(Date.now());
+  const offer = `AptReputation turns this into a fix plan: each issue as a step-by-step task, the requests to listing sites and web vendors written for you, and a fresh check every month to show what changed. It also covers your Google reviews, with a reply drafted for each one. The first 14 days are free.${promo ? ` ${promo}` : ""}`;
+  const caveat = `Each question was asked once per assistant, and their answers vary from day to day, so read this as a sample.`;
+  const optOut = `If this isn't useful, reply "no thanks" and I won't write again.`;
+
+  const text = [
+    hello,
+    hook,
+    result,
+    ai.assistants.map((x) => `  ${x.label}: named in ${x.shown} of ${x.outOf}`).join("\n"),
+    [...quotes, google].filter(Boolean).join("\n") || null,
+    instead,
+    findings.length ? `What is holding it back:\n${findings.map((t) => `  - ${t}`).join("\n")}` : null,
+    close,
+    offer,
+    `${SENDER.name}\nAptReputation\n${SENDER.email}`,
+    `${caveat} ${optOut}`,
+    POSTAL_ADDRESS,
+  ].filter(Boolean).join("\n\n");
+
+  const font = "font-family:Arial,Helvetica,sans-serif;";
+  const p = (t: string) => `<p style="${font}font-size:15px;line-height:22px;color:#1e293b;margin:0 0 14px;">${t}</p>`;
+  const tile = (label: string, big: string, small: string) =>
+    `<td width="49%" valign="top" style="${font}background:#f1f5f9;border-radius:8px;padding:14px 16px;">` +
+    `<div style="font-size:13px;color:#475569;">${label}</div>` +
+    `<div style="font-size:30px;line-height:38px;font-weight:bold;color:#0f2a4a;">${big}</div>` +
+    `<div style="font-size:13px;color:#475569;">${small}</div></td>`;
+  const small = `<span style="font-size:15px;font-weight:normal;color:#64748b;">`;
+  const tiles =
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:0;margin:0 0 14px;"><tr>` +
+    tile("AI answers that named you", `${ai.shown} ${small}of ${ai.outOf}</span>`, esc(names)) +
+    `<td width="2%" style="font-size:0;line-height:0;">&nbsp;</td>` +
+    tile("AptRep Score", a.score !== null ? `${a.score} ${small}of 100</span>` : "–", stars ? `${stars} stars on Google, ${count(a.totalReviews)}` : "No Google rating yet") +
+    `</tr></table>`;
+  const cell = `${font}font-size:14px;line-height:20px;padding:6px 0;border-bottom:1px solid #e2e8f0;`;
+  const table =
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 14px;">` +
+    ai.assistants.map((x) => `<tr><td style="${cell}color:#1e293b;">${esc(x.label)}</td><td align="right" style="${cell}color:#475569;white-space:nowrap;">named in ${x.shown} of ${x.outOf}</td></tr>`).join("") +
+    `</table>`;
+  const held = findings.length
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 14px;"><tr><td style="${font}border-left:3px solid #1554c0;background:#f1f5f9;padding:10px 14px;font-size:15px;line-height:22px;color:#1e293b;"><strong>What is holding it back</strong><br>${findings.map(esc).join("<br>")}</td></tr></table>`
+    : "";
+  const html =
+    `<div style="max-width:560px;">` +
+    p(esc(hello)) +
+    p(esc(hook)) +
+    p(`<strong>${esc(result)}</strong>`) +
+    tiles +
+    table +
+    (quotes.length ? p(quotes.map(esc).join("<br>")) : "") +
+    (instead ? p(esc(instead)) : "") +
+    held +
+    p(`The full report shows each question and which assistants named you: <a href="${url}" style="color:#1554c0;">${link}</a>`) +
+    p(esc(offer)) +
+    p(`${esc(SENDER.name)}<br>AptReputation<br>${esc(SENDER.email)}`) +
+    `<p style="${font}font-size:12px;line-height:18px;color:#64748b;margin:18px 0 0;">${esc(caveat)} ${esc(optOut)}<br>${esc(POSTAL_ADDRESS)}</p>` +
     `</div>`;
 
   return { subject, html, text, link };
