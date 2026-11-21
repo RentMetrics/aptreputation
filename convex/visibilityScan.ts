@@ -253,9 +253,9 @@ async function checkSite(website: string, phone: string | null): Promise<SiteChe
 export const run = internalAction({
   args: { scanId: v.id("visibilityScans") },
   handler: async (ctx, { scanId }): Promise<null> => {
-    const found = await ctx.runQuery(internal.visibility.scanContext, { scanId });
-    if (!found) return null;
-    const { community } = found;
+    // The target is a customer's property, or any Google listing for an admin report.
+    const community = await ctx.runQuery(internal.visibility.scanContext, { scanId });
+    if (!community) return null;
     try {
       // The answers are read into a table by Claude, so its key is needed whichever assistants are asked.
       if (!process.env.ANTHROPIC_API_KEY) throw new Error("AI is not configured yet (ANTHROPIC_API_KEY).");
@@ -264,7 +264,7 @@ export const run = internalAction({
       const questions = questionsFor(community.name, market);
       const active = ASSISTANTS.filter((a) => ASK[a.key].ready());
 
-      const contact = await placeContact(community.googlePlaceId).catch(() => ({ website: undefined, phone: undefined }));
+      const contact = await placeContact(community.placeId).catch(() => ({ website: undefined, phone: undefined }));
       // One cell per question and assistant, all asked at once.
       const cells = questions.flatMap((q, qi) => active.map((a) => ({ qi, key: a.key, question: q.question })));
       const [raw, siteRaw] = await Promise.all([
@@ -336,8 +336,8 @@ export const run = internalAction({
         google: {
           name: community.name,
           address: community.address,
-          rating: community.googleRating ?? null,
-          totalReviews: community.totalReviews ?? 0,
+          rating: community.rating,
+          totalReviews: community.totalReviews,
           phone: contact.phone ?? null,
           website: contact.website ?? null,
         },

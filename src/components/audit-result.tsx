@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Stars } from "@/components/stars"
 import { errorMessage } from "@/lib/format"
+import { labelOf, listOf, type AiSummary } from "@/convex/lib/visibility"
+import { promoLine } from "@/convex/lib/promo"
 
 export type Audit = {
   placeId: string
@@ -30,6 +32,93 @@ export type Audit = {
   summary: string | null
   praised: string[]
   concerns: string[]
+  ai?: AiSummary | null
+}
+
+/** How AI assistants answer renters about this property: what they said, with the fixes left for subscribers. */
+function AiSearch({ ai, name }: { ai: AiSummary; name: string }) {
+  const offer = promoLine(Date.now())
+  return (
+    <div className="rounded-xl border border-line p-4 sm:p-5 grid gap-4 break-inside-avoid">
+      <div>
+        <p className="font-semibold">How AI assistants answer renters</p>
+        <p className="text-sm text-slate-600">
+          We asked {listOf(ai.assistants.map((a) => a.label))} the questions renters ask about apartments nearby, each with web search, and recorded whether they named {name}.
+        </p>
+      </div>
+      <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
+        <div>
+          <p className="text-3xl font-bold tabular-nums">{ai.shown} of {ai.outOf}</p>
+          <p className="text-sm text-slate-600">answers named this property</p>
+        </div>
+        {ai.assistants.map((a) => (
+          <div key={a.key}>
+            <p className="text-xl font-semibold tabular-nums">{a.shown} of {a.outOf}</p>
+            <p className="text-sm text-slate-600">{a.label}</p>
+          </div>
+        ))}
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-slate-600 border-b border-line">
+              <th className="py-1.5 pr-3 font-medium">A renter asks</th>
+              {ai.assistants.map((a) => <th key={a.key} className="py-1.5 pr-3 font-medium whitespace-nowrap">{a.label}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {ai.questions.map((q) => (
+              <tr key={q.question} className="border-b border-line last:border-0 align-top">
+                <td className="py-1.5 pr-3">{q.question}</td>
+                {ai.assistants.map((a) => {
+                  const ans = q.answers.find((x) => x.assistant === a.key)
+                  return (
+                    <td key={a.key} className={`py-1.5 pr-3 whitespace-nowrap ${ans?.mentioned ? "text-emerald-800 font-medium" : "text-slate-500"}`}>
+                      {!ans ? "No answer" : ans.mentioned ? (ans.position ? `Named, no. ${ans.position}` : "Named") : "Not named"}
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {ai.byName.length > 0 && (
+        <div>
+          <p className="font-semibold text-sm mb-1">Asked about {name} by name</p>
+          <ul className="text-sm text-slate-700 grid gap-1">
+            {ai.byName.map((b) => (
+              <li key={b.assistant}>
+                <span className="font-medium">{labelOf(b.assistant)}:</span>{" "}
+                {b.tone === "none" ? "did not describe it" : `a ${b.tone} description`}
+                {b.statedRating ? `, quoting ${b.statedRating}` : ""}
+                {b.statedPhone ? `, phone ${b.statedPhone}` : ""}.
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {ai.competitors.length > 0 && (
+        <p className="text-sm text-slate-700">
+          <span className="font-semibold">Named most often instead:</span> {ai.competitors.map((c) => c.name).join(", ")}.
+        </p>
+      )}
+      {ai.findings.length > 0 && (
+        <div>
+          <p className="font-semibold text-sm mb-1">What is holding it back</p>
+          <ul className="list-disc pl-5 text-sm text-slate-700 grid gap-1">
+            {ai.findings.map((f) => <li key={f.title}><span className="font-medium">{f.title}.</span> {f.why}</li>)}
+          </ul>
+        </div>
+      )}
+      <p className="text-sm text-slate-700 rounded-lg bg-slate-50 p-3">
+        <span className="font-semibold">The fix plan comes with the monthly service.</span> Subscribers get each of these as a step-by-step task, requests written for them to send to listing sites and web vendors, and a fresh check every month to confirm what changed.{offer ? ` ${offer}` : ""}
+      </p>
+      <p className="text-xs text-slate-500">
+        Each question was asked once per assistant on {new Date(ai.at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}. Assistants word answers differently each time, so this is a sample, not a ranking.
+      </p>
+    </div>
+  )
 }
 
 /**
@@ -141,6 +230,7 @@ export function AuditResultBody({ audit, signUpHref = "/sign-up" }: { audit: Aud
           </ol>
         </div>
       )}
+      {audit.ai && <AiSearch ai={audit.ai} name={audit.name} />}
       {audit.nextStep && (
         <div className="rounded-xl border border-line bg-slate-50 p-4">
           <p className="font-semibold text-sm mb-1">What would raise it most</p>

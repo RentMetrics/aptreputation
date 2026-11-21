@@ -263,3 +263,38 @@ export function fixesFor(r: Omit<VisibilityResult, "fixes">): Fix[] {
   }
   return fixes;
 }
+
+/** The part of a check shown on a public AptRep Score report: what assistants said, without the steps to fix it. */
+export type AiSummary = {
+  at: number;
+  shown: number;
+  outOf: number;
+  assistants: AssistantTotal[];
+  questions: { question: string; answers: { assistant: AssistantKey; mentioned: boolean; position: number | null }[] }[];
+  byName: { assistant: AssistantKey; tone: AssistantAnswer["tone"]; statedRating: string | null; statedPhone: string | null }[];
+  competitors: { name: string; count: number }[];
+  findings: { title: string; why: string }[];
+};
+
+export function summaryOf(result: VisibilityResult, at: number): AiSummary {
+  return {
+    at,
+    shown: result.shown,
+    outOf: result.outOf,
+    assistants: result.assistants,
+    questions: result.prompts
+      .filter((p) => p.kind === "need")
+      .map((p) => ({
+        question: p.question,
+        answers: p.answers.filter((a) => !a.error).map((a) => ({ assistant: a.assistant, mentioned: a.mentioned, position: a.position })),
+      })),
+    byName: (result.prompts.find((p) => p.kind === "name")?.answers ?? [])
+      .filter((a) => !a.error)
+      .map((a) => ({ assistant: a.assistant, tone: a.tone, statedRating: a.statedRating, statedPhone: a.statedPhone })),
+    competitors: result.competitors.slice(0, 5),
+    findings: result.fixes.map((f) => ({ title: f.title, why: f.why })),
+  };
+}
+
+/** "ChatGPT, Gemini and Claude" */
+export const listOf = (items: string[]) => (items.length > 1 ? `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}` : items[0] ?? "");

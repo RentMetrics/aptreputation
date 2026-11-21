@@ -378,7 +378,11 @@ export default defineSchema({
 
   // AI search check: how AI assistants answer renter questions about a property.
   visibilityScans: defineTable({
-    communityId: v.id("communities"),
+    // A customer's property, or absent for a report an admin runs on any Google listing.
+    communityId: v.optional(v.id("communities")),
+    // The Google listing checked. Always set for admin reports; they are found by it.
+    placeId: v.optional(v.string()),
+    target: v.optional(v.object({ name: v.string(), address: v.string(), rating: v.optional(v.number()), totalReviews: v.optional(v.number()) })),
     startedBy: v.id("users"),
     startedAt: v.number(),
     status: v.union(v.literal("running"), v.literal("done"), v.literal("failed")),
@@ -387,7 +391,9 @@ export default defineSchema({
     finishedAt: v.optional(v.number()),
     error: v.optional(v.string()),
     result: v.optional(v.string()), // JSON, see convex/lib/visibility.ts
-  }).index("by_community", ["communityId", "startedAt"]),
+  })
+    .index("by_community", ["communityId", "startedAt"])
+    .index("by_place", ["placeId", "startedAt"]),
 
   // Fix plan: one row per thing to fix at a property. Rows are opened and
   // cleared by the AI search check; people mark their part done in between.

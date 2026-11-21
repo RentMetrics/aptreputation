@@ -237,13 +237,14 @@ export function FixPlanTab({ communityId, onOpenTab }: { communityId: Id<"commun
             </p>
           </div>
           {canAct && (
-            <Button variant="outline" size="sm" onClick={run} disabled={running}>
+            <Button variant="outline" size="sm" onClick={run} disabled={running || !check.allowance.allowed}>
               <RefreshCw className={`h-4 w-4 mr-1.5 ${running ? "animate-spin" : ""}`} />
               {running ? "Asking the assistants…" : plan.lastCheckAt ? "Check again now" : "Run the check"}
             </Button>
           )}
         </div>
         {error && <p className="text-sm text-red-700 mt-3" role="alert">{error}</p>}
+        {!running && check.allowance.reason && <p className="text-sm text-slate-600 mt-3">{check.allowance.reason}</p>}
         <div className="mt-5 flex flex-wrap items-end gap-x-10 gap-y-4">
           <div>
             <p className="text-4xl font-semibold tabular-nums">{plan.open}</p>

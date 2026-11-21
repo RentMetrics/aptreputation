@@ -2,6 +2,7 @@ import { action, internalMutation, internalQuery, mutation } from "./_generated/
 import { internal } from "./_generated/api";
 import { ConvexError, v } from "convex/values";
 import { nearbyCommunities, placeDetails, searchPlaces, type NearbyCommunity } from "./lib/google";
+import type { AiSummary } from "./lib/visibility";
 
 const DAILY_CAP = 400; // free public audits per day, to bound Google + AI spend
 const DAY = 24 * 60 * 60 * 1000;
@@ -39,6 +40,8 @@ export type AuditResult = {
   summary: string | null;
   praised: string[];
   concerns: string[];
+  /** How AI assistants answer renters about this property, when we have run that check for it. Never cached with the score. */
+  ai?: AiSummary | null;
 };
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -192,7 +195,7 @@ export const run = action({
     const cachedJson = await ctx.runQuery(internal.audit.cached, { placeId: hit.placeId });
     if (cachedJson) {
       const prior = JSON.parse(cachedJson) as AuditResult;
-      if (prior.v === RESULT_VERSION) return prior;
+      if (prior.v === RESULT_VERSION) return { ...prior, ai: await ctx.runQuery(internal.visibility.publicSummary, { placeId: hit.placeId }) };
     }
 
     const place = await placeDetails(hit.placeId);
@@ -230,7 +233,7 @@ export const run = action({
       concerns: ai?.concerns ?? [],
     };
     await ctx.runMutation(internal.audit.store, { placeId: place.placeId, result: JSON.stringify(result) });
-    return result;
+    return { ...result, ai: await ctx.runQuery(internal.visibility.publicSummary, { placeId: place.placeId }) };
   },
 });
 

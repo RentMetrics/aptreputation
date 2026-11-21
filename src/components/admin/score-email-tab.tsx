@@ -1,7 +1,7 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { useAction } from "convex/react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { useAction, useMutation, useQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -31,6 +31,28 @@ export function ScoreEmailTab() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
+  const startReport = useMutation(api.visibility.startReport)
+  const report = useQuery(api.visibility.reportStatus, audit ? { placeId: audit.placeId } : "skip")
+  const [reportError, setReportError] = useState<string | null>(null)
+
+  // When the AI search report finishes, score the property again so the email picks it up.
+  const loadedFor = useRef<number | null>(null)
+  useEffect(() => {
+    if (!audit || !report?.doneAt || loadedFor.current === report.doneAt) return
+    if (audit.ai?.at === report.doneAt) return
+    loadedFor.current = report.doneAt
+    void runAudit({ query: ran }).then((fresh) => fresh && setAudit(fresh)).catch(() => undefined)
+  }, [audit, report?.doneAt, ran, runAudit])
+
+  const addReport = async () => {
+    if (!audit) return
+    setReportError(null)
+    try {
+      await startReport({ placeId: audit.placeId, name: audit.name, address: audit.address, rating: audit.rating ?? undefined, totalReviews: audit.totalReviews })
+    } catch (err) {
+      setReportError(errorMessage(err))
+    }
+  }
 
   const email = useMemo(() => (audit ? scoreEmail(audit, { query: ran, firstName }) : null), [audit, ran, firstName])
   const blocked = audit ? blockedBy(audit.name, to) : to ? blockedBy(to) : null
@@ -123,6 +145,22 @@ export function ScoreEmailTab() {
                 <a href={`/score?q=${encodeURIComponent(ran)}`} target="_blank" rel="noreferrer">Open full report</a>
               </Button>
             </div>
+          </div>
+          <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-medium text-sm">AI search report</p>
+              <p className="text-sm text-slate-600">
+                {report?.running
+                  ? "Asking ChatGPT, Gemini and Claude. This takes about a minute."
+                  : audit.ai
+                    ? `Included: named in ${audit.ai.shown} of ${audit.ai.outOf} answers. It also shows on the full report page. The fix plan is left for subscribers.`
+                    : "Adds how ChatGPT, Gemini and Claude answer renters about this property. Each one costs about two dollars to run."}
+              </p>
+              {(reportError || report?.failed) && <p className="text-sm text-red-700" role="alert">{reportError ?? report?.failed}</p>}
+            </div>
+            <Button variant="outline" onClick={addReport} disabled={!!blocked || !!report?.running}>
+              {report?.running ? "Running…" : audit.ai ? "Run it again" : "Add the AI search report"}
+            </Button>
           </div>
           <p className="text-sm text-slate-600 mt-3">
             Check the match above is the property you meant. The link in the email, {email.link}, opens the same

@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Stars } from "@/components/stars"
 import { AuditResultBody, type Audit } from "@/components/audit-result"
+import { LIST_PRICE, PROMO, promoActive } from "@/convex/lib/promo"
 import { errorMessage } from "@/lib/format"
 
 function InactiveCardNotice() {
@@ -368,13 +369,27 @@ export default function Home() {
         <div>
           <h2 className="font-display text-3xl sm:text-4xl font-bold">One plan, per property</h2>
           <p className="text-lg text-muted mt-4 max-w-xl leading-relaxed">
-            Review inbox with AI reply drafts, email alerts, resident insights, tap cards and QR codes with tracking,
-            team profiles, and progress reporting. Invite as many teammates as you need.
+            A monthly check of how ChatGPT, Gemini and Claude answer renters about your property, with a step-by-step
+            fix plan. Review inbox with AI reply drafts, email alerts, resident insights, tap cards and QR codes with
+            tracking, team profiles, and progress reporting. Invite as many teammates as you need.
           </p>
         </div>
         <div className="bg-ink text-white rounded-3xl p-8 md:min-w-80">
-          <p className="font-display text-6xl font-extrabold tabular-nums leading-none">$99</p>
-          <p className="text-blue-200 mt-2">per property, per month</p>
+          {promoActive(Date.now()) ? (
+            <>
+              <p className="text-sm font-semibold uppercase tracking-wide text-star">{PROMO.name}</p>
+              <p className="mt-2 font-display text-6xl font-extrabold tabular-nums leading-none">
+                ${PROMO.price} <span className="text-2xl font-semibold text-blue-200 line-through">${LIST_PRICE}</span>
+              </p>
+              <p className="text-blue-200 mt-2">per property, per month, for your first {PROMO.months} months</p>
+              <p className="text-sm text-blue-200 mt-1">Subscribe by {PROMO.deadline}. ${LIST_PRICE} after that.</p>
+            </>
+          ) : (
+            <>
+              <p className="font-display text-6xl font-extrabold tabular-nums leading-none">${LIST_PRICE}</p>
+              <p className="text-blue-200 mt-2">per property, per month</p>
+            </>
+          )}
           <Button asChild className="mt-6 h-12 w-full text-base bg-star text-ink hover:bg-star/90 font-semibold"><Link href="/sign-up">Start free trial</Link></Button>
           <p className="text-sm text-blue-200 mt-3">14 days free. No card needed.</p>
         </div>

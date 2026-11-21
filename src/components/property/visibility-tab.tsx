@@ -5,7 +5,7 @@ import { useMutation, useQuery } from "convex/react"
 import { RefreshCw } from "lucide-react"
 import { api } from "@/convex/_generated/api"
 import { Id } from "@/convex/_generated/dataModel"
-import { labelOf, type AssistantAnswer, type VisibilityResult } from "@/convex/lib/visibility"
+import { labelOf, listOf, type AssistantAnswer, type VisibilityResult } from "@/convex/lib/visibility"
 import { useCanAct } from "@/components/property/access"
 import { Button } from "@/components/ui/button"
 import { errorMessage, formatDate } from "@/lib/format"
@@ -94,12 +94,12 @@ export function VisibilityTab({ communityId }: { communityId: Id<"communities"> 
             <h2 className="text-lg font-semibold">How AI assistants answer renters</h2>
             <p className="text-sm text-slate-600">
               {result && data.current
-                ? `${result.assistants.map((a) => a.label).join(", ")}, each with web search · checked ${formatDate(data.current.at)}`
+                ? `${listOf(result.assistants.map((a) => a.label))}, each with web search · checked ${formatDate(data.current.at)}`
                 : "We ask AI assistants the questions renters ask, and record whether they name this property."}
             </p>
           </div>
           {canAct && (
-            <Button variant="outline" size="sm" onClick={run} disabled={running}>
+            <Button variant="outline" size="sm" onClick={run} disabled={running || !data.allowance.allowed}>
               <RefreshCw className={`h-4 w-4 mr-1.5 ${running ? "animate-spin" : ""}`} />
               {running ? "Asking the assistants…" : result ? "Check again" : "Run the check"}
             </Button>
@@ -107,6 +107,7 @@ export function VisibilityTab({ communityId }: { communityId: Id<"communities"> 
         </div>
         {running && <p className="text-sm text-slate-600 mt-3">This takes a minute or two. You can leave this page; the result will be here when you come back.</p>}
         {error && <p className="text-sm text-red-700 mt-3" role="alert">{error}</p>}
+        {!running && data.allowance.reason && <p className="text-sm text-slate-600 mt-3">{data.allowance.reason}</p>}
         {!running && data.failed && <p className="text-sm text-red-700 mt-3" role="alert">The last check did not finish: {data.failed.error}</p>}
 
         {result && (

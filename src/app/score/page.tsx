@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { AuditResultBody, type Audit } from "@/components/audit-result"
 import { errorMessage } from "@/lib/format"
+import { promoLine } from "@/convex/lib/promo"
 
 /** "Bridgeside Landing Taylorsville UT" -> "bridgeside-landing-taylorsville-ut", the short-link form. */
 function reportSlug(text: string) {
@@ -157,7 +158,7 @@ export default function ScorePage() {
                       <p className="font-semibold text-ink">Raise this score with AptReputation.</p>
                       <p className="mt-1">
                         Your team replies to every review from one place, with a draft ready to edit, and earns new reviews with tap cards. 14 days free, no card
-                        needed: aptreputation.com
+                        needed: aptreputation.com{promoLine(Date.now()) ? ` · ${promoLine(Date.now())}` : ""}
                       </p>
                       <p className="mt-2 text-xs text-slate-500">
                         See this score live at aptrep.com/{reportSlug(query || audit.name)}. The AptRep Score is counted from the property&apos;s public Google listing.

@@ -6,6 +6,7 @@ import { useAction, useQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import { Button } from "@/components/ui/button"
 import { errorMessage, formatDate } from "@/lib/format"
+import { LIST_PRICE, PROMO, promoActive } from "@/convex/lib/promo"
 
 function CheckoutNotice() {
   const params = useSearchParams()
@@ -38,6 +39,9 @@ export default function BillingPage() {
 
   if (!me) return null
   const count = Math.max(1, properties?.length ?? 1)
+  // The offer is for a first subscription, taken before it ends.
+  const offer = promoActive(Date.now()) && !me.subscriptionStatus
+  const price = offer ? PROMO.price : LIST_PRICE
 
   return (
     <div className="max-w-2xl">
@@ -47,9 +51,18 @@ export default function BillingPage() {
       <section className="bg-white border border-slate-200 rounded-xl p-6">
         <div className="flex items-baseline justify-between gap-4">
           <h2 className="text-lg font-semibold">AptReputation</h2>
-          <p><span className="text-3xl font-bold">$99</span> <span className="text-slate-600">per property / month</span></p>
+          <p>
+            {offer && <span className="text-slate-500 line-through mr-2">${LIST_PRICE}</span>}
+            <span className="text-3xl font-bold">${price}</span> <span className="text-slate-600">per property / month</span>
+          </p>
         </div>
+        {offer && (
+          <p className="mt-3 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2.5 text-sm text-amber-900">
+            <span className="font-semibold">{PROMO.name}.</span> Subscribe by {PROMO.deadline} and pay ${PROMO.price} per property a month for your first {PROMO.months} months. After that it is ${LIST_PRICE}.
+          </p>
+        )}
         <ul className="mt-4 text-sm text-slate-700 space-y-1.5 list-disc pl-5">
+          <li>A monthly check of how ChatGPT, Gemini and Claude answer renters about each property, with a step-by-step fix plan</li>
           <li>Every Google review in one inbox, with AI reply drafts you approve</li>
           <li>Resident insights and an action plan for each property</li>
           <li>NFC cards, QR codes and links with tap tracking</li>
@@ -79,7 +92,7 @@ export default function BillingPage() {
                 {me.subscriptionStatus ? ` Last subscription status: ${me.subscriptionStatus}.` : ""}
               </p>
               <Button className="mt-3" disabled={busy} onClick={() => go(() => checkout({}))}>
-                {busy ? "Opening checkout…" : `Subscribe · $${99 * count}/month for ${count} propert${count === 1 ? "y" : "ies"}`}
+                {busy ? "Opening checkout…" : `Subscribe · $${price * count}/month for ${count} propert${count === 1 ? "y" : "ies"}`}
               </Button>
               <p className="text-xs text-slate-500 mt-2">The amount updates automatically when you add or remove properties.</p>
             </>

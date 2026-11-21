@@ -22,6 +22,7 @@ import type * as lib_auth from "../lib/auth.js";
 import type * as lib_fixPlan from "../lib/fixPlan.js";
 import type * as lib_google from "../lib/google.js";
 import type * as lib_outreachCopy from "../lib/outreachCopy.js";
+import type * as lib_promo from "../lib/promo.js";
 import type * as lib_scoreEmail from "../lib/scoreEmail.js";
 import type * as lib_visibility from "../lib/visibility.js";
 import type * as members from "../members.js";
@@ -56,6 +57,7 @@ declare const fullApi: ApiFromModules<{
   "lib/fixPlan": typeof lib_fixPlan;
   "lib/google": typeof lib_google;
   "lib/outreachCopy": typeof lib_outreachCopy;
+  "lib/promo": typeof lib_promo;
   "lib/scoreEmail": typeof lib_scoreEmail;
   "lib/visibility": typeof lib_visibility;
   members: typeof members;

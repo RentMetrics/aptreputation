@@ -2,7 +2,25 @@ import { action, internalAction, internalMutation, internalQuery } from "./_gene
 import { internal } from "./_generated/api";
 import { ConvexError, v } from "convex/values";
 
-export const PRICE_PER_PROPERTY_CENTS = 9900;
+import { LIST_PRICE, PROMO, promoActive } from "./lib/promo";
+
+export const PRICE_PER_PROPERTY_CENTS = LIST_PRICE * 100;
+
+/** The sign-up offer as a Stripe coupon, created the first time it is needed. */
+async function promoCoupon(): Promise<string> {
+  try {
+    await stripe(`coupons/${PROMO.couponId}`, undefined, "GET");
+  } catch {
+    await stripe("coupons", {
+      id: PROMO.couponId,
+      name: `${PROMO.name}: $${PROMO.price} per property`,
+      percent_off: PROMO.percentOff,
+      duration: "repeating",
+      duration_in_months: String(PROMO.months),
+    });
+  }
+  return PROMO.couponId;
+}
 
 async function stripe(path: string, params?: Record<string, string>, method = "POST") {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -69,6 +87,8 @@ export const createCheckout = action({
       params["line_items[0][price_data][recurring][interval]"] = "month";
       params["line_items[0][price_data][product_data][name]"] = "AptReputation – per property";
     }
+    // The offer applies to a first subscription only, not to someone coming back after cancelling.
+    if (promoActive(Date.now()) && !user.subscriptionId) params["discounts[0][coupon]"] = await promoCoupon();
     const session = await stripe("checkout/sessions", params);
     return session.url as string;
   },

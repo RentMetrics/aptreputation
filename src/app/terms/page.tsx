@@ -89,7 +89,7 @@ export default function TermsPage() {
       <section>
         <h2>Fees</h2>
         <ul>
-          <li>The Service costs $99 per property per month after a 14-day free trial, billed monthly in advance through Stripe. The amount changes as you add or remove properties.</li>
+          <li>The Service costs $99 per property per month after a 14-day free trial, billed monthly in advance through Stripe. When a promotional price is offered, it applies for the period shown at checkout and the standard price applies afterwards. The amount changes as you add or remove properties.</li>
           <li>Subscriptions renew each month until canceled. You can cancel at any time in Billing; access continues to the end of the paid period. Fees already paid are not refunded except where the law requires.</li>
           <li>We may change prices with at least 30 days&apos; notice to account holders.</li>
           <li>If payment fails, we may pause syncing, AI features and reply posting until it is resolved.</li>
