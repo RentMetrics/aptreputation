@@ -346,3 +346,98 @@ export const postReply = action({
     return null;
   },
 });
+
+// ---- the listing itself ------------------------------------------------------
+
+const BUSINESS_INFO = "https://mybusinessbusinessinformation.googleapis.com/v1";
+const DAY_LABEL: Record<string, string> = { MONDAY: "Mon", TUESDAY: "Tue", WEDNESDAY: "Wed", THURSDAY: "Thu", FRIDAY: "Fri", SATURDAY: "Sat", SUNDAY: "Sun" };
+
+function clock(t: { hours?: number; minutes?: number } | undefined) {
+  const h = t?.hours ?? 0;
+  const m = t?.minutes ?? 0;
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  return `${hour}${m ? `:${String(m).padStart(2, "0")}` : ""} ${h % 24 < 12 ? "AM" : "PM"}`;
+}
+
+/** The Business Information API names a location without its account. */
+const bareLocation = (gbpLocation: string) => gbpLocation.replace(/^accounts\/[^/]+\//, "");
+
+export type ListingFacts = {
+  title: string;
+  phone: string | null;
+  website: string | null;
+  hours: string[];
+  /** What the fact sheet says, for comparison. */
+  factPhone: string | null;
+  factWebsite: string | null;
+  factHours: string | null;
+};
+
+async function managedListing(ctx: ActionCtx, communityId: Id<"communities">) {
+  const { community, owner, role } = await ctx.runQuery(internal.communities.access, { communityId });
+  if (role !== "owner" && role !== "manager") throw new ConvexError("Only the owner or a manager can change the Google listing.");
+  if (!community.gbpLocation) throw new ConvexError("Connect this property's Google Business Profile in Settings first.");
+  const token = await accessToken(ctx, community.gbpConnectedBy ?? community.ownerId);
+  return { community, owner, token, name: bareLocation(community.gbpLocation) };
+}
+
+/** What the property's Google listing shows now, beside the fact sheet. Changes nothing. */
+export const listingFacts = action({
+  args: { communityId: v.id("communities") },
+  handler: async (ctx, { communityId }): Promise<ListingFacts> => {
+    const { community, token, name } = await managedListing(ctx, communityId);
+    const url = new URL(`${BUSINESS_INFO}/${name}`);
+    url.searchParams.set("readMask", "title,phoneNumbers,websiteUri,regularHours");
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new ConvexError(await googleError(res));
+    const loc = await res.json();
+    const periods: { openDay?: string; openTime?: { hours?: number; minutes?: number }; closeTime?: { hours?: number; minutes?: number } }[] = loc.regularHours?.periods ?? [];
+    return {
+      title: loc.title ?? community.name,
+      phone: loc.phoneNumbers?.primaryPhone ?? null,
+      website: loc.websiteUri ?? null,
+      hours: periods.map((p) => `${DAY_LABEL[p.openDay ?? ""] ?? p.openDay ?? ""} ${clock(p.openTime)} to ${clock(p.closeTime)}`),
+      factPhone: community.facts?.phone ?? null,
+      factWebsite: community.facts?.website ?? null,
+      factHours: community.facts?.hours ?? null,
+    };
+  },
+});
+
+/**
+ * Writes the fact sheet's phone and/or website to the Google listing. Only the
+ * fields asked for are sent, and only an owner or manager can do it. Google may
+ * review an edit before it shows publicly.
+ */
+export const updateListing = action({
+  args: { communityId: v.id("communities"), phone: v.boolean(), website: v.boolean() },
+  handler: async (ctx, { communityId, phone, website }): Promise<{ phone: string | null; website: string | null }> => {
+    const { community, owner, token, name } = await managedListing(ctx, communityId);
+    requireActive(owner);
+    const body: { phoneNumbers?: { primaryPhone: string }; websiteUri?: string } = {};
+    const mask: string[] = [];
+    if (phone) {
+      const value = community.facts?.phone?.trim();
+      if (!value || value.replace(/\D/g, "").length < 10) throw new ConvexError("The fact sheet has no complete phone number to send.");
+      body.phoneNumbers = { primaryPhone: value };
+      mask.push("phoneNumbers.primaryPhone");
+    }
+    if (website) {
+      const value = community.facts?.website?.trim();
+      if (!value || !/^https?:\/\/[^\s]+\.[^\s]+$/i.test(value)) throw new ConvexError("The fact sheet's website must be a full address starting with https://.");
+      body.websiteUri = value;
+      mask.push("websiteUri");
+    }
+    if (mask.length === 0) throw new ConvexError("Choose at least one line to update.");
+    const url = new URL(`${BUSINESS_INFO}/${name}`);
+    url.searchParams.set("updateMask", mask.join(","));
+    const res = await fetch(url, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new ConvexError(await googleError(res));
+    const loc = await res.json();
+    return { phone: loc.phoneNumbers?.primaryPhone ?? null, website: loc.websiteUri ?? null };
+  },
+});

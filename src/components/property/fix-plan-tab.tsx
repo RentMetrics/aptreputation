@@ -132,6 +132,127 @@ function TaskCard({ task, communityId, onOpen }: { task: Task; communityId: Id<"
   )
 }
 
+type Listing = { title: string; phone: string | null; website: string | null; hours: string[]; factPhone: string | null; factWebsite: string | null; factHours: string | null }
+
+const digitsOf = (s: string | null) => (s ?? "").replace(/\D/g, "").replace(/^1(?=\d{10}$)/, "")
+const siteOf = (s: string | null) => (s ?? "").trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, "").replace(/\/+$/, "")
+
+/** Compares the fact sheet with the live Google listing and sends the lines the manager picks. */
+function GoogleListing({ communityId }: { communityId: Id<"communities"> }) {
+  const load = useAction(api.google.listingFacts)
+  const update = useAction(api.google.updateListing)
+  const [listing, setListing] = useState<Listing | null>(null)
+  const [busy, setBusy] = useState<"load" | "send" | null>(null)
+  const [pick, setPick] = useState({ phone: false, website: false })
+  const [note, setNote] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const compare = async () => {
+    setError(null)
+    setNote(null)
+    setBusy("load")
+    try {
+      const l = await load({ communityId })
+      setListing(l)
+      setPick({
+        phone: !!l.factPhone && digitsOf(l.factPhone) !== digitsOf(l.phone),
+        website: !!l.factWebsite && siteOf(l.factWebsite) !== siteOf(l.website),
+      })
+    } catch (e) {
+      setError(errorMessage(e))
+    } finally {
+      setBusy(null)
+    }
+  }
+  const send = async () => {
+    if (!listing) return
+    setError(null)
+    setBusy("send")
+    try {
+      const now = await update({ communityId, ...pick })
+      setListing({ ...listing, phone: now.phone, website: now.website })
+      setPick({ phone: false, website: false })
+      setNote("Sent to Google. Google checks some edits before they show publicly, which can take a few days.")
+    } catch (e) {
+      setError(errorMessage(e))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const rows = listing
+    ? ([
+        { key: "phone" as const, label: "Phone", fact: listing.factPhone, google: listing.phone, same: digitsOf(listing.factPhone) === digitsOf(listing.phone) },
+        { key: "website" as const, label: "Website", fact: listing.factWebsite, google: listing.website, same: siteOf(listing.factWebsite) === siteOf(listing.website) },
+      ])
+    : []
+
+  return (
+    <div className="mt-6 border-t border-slate-200 pt-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="font-semibold">Update the Google listing from the fact sheet</h3>
+          <p className="text-sm text-slate-600">See what Google shows now, then send the phone and website from the fact sheet. Save the fact sheet first. Nothing changes until you choose.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={compare} disabled={busy !== null}>
+          {busy === "load" ? "Reading Google…" : listing ? "Compare again" : "Compare with Google"}
+        </Button>
+      </div>
+      {error && <p className="text-sm text-red-700 mt-3" role="alert">{error}</p>}
+      {note && <p className="text-sm text-emerald-800 mt-3" role="status">{note}</p>}
+      {listing && (
+        <>
+          <div className="overflow-x-auto mt-3">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-slate-600 border-b">
+                  <th className="py-2 pr-3 font-medium">Update</th>
+                  <th className="py-2 pr-3 font-medium">Line</th>
+                  <th className="py-2 pr-3 font-medium">Fact sheet</th>
+                  <th className="py-2 font-medium">Google now ({listing.title})</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.key} className="border-b align-top">
+                    <td className="py-2 pr-3">
+                      <input
+                        id={`send-${r.key}`}
+                        type="checkbox"
+                        className="h-4 w-4"
+                        checked={pick[r.key]}
+                        disabled={!r.fact || r.same}
+                        onChange={(e) => setPick({ ...pick, [r.key]: e.target.checked })}
+                        aria-label={`Send the ${r.label.toLowerCase()} to Google`}
+                      />
+                    </td>
+                    <td className="py-2 pr-3"><label htmlFor={`send-${r.key}`}>{r.label}</label></td>
+                    <td className="py-2 pr-3 break-words">{r.fact ?? <span className="text-slate-500">Not on the fact sheet</span>}</td>
+                    <td className="py-2 break-words">
+                      {r.google ?? <span className="text-slate-500">None</span>}{" "}
+                      {r.fact && (r.same ? <span className="text-emerald-800">· matches</span> : <span className="text-amber-800">· different</span>)}
+                    </td>
+                  </tr>
+                ))}
+                <tr className="align-top">
+                  <td className="py-2 pr-3" />
+                  <td className="py-2 pr-3">Hours</td>
+                  <td className="py-2 pr-3 break-words">{listing.factHours ?? <span className="text-slate-500">Not on the fact sheet</span>}</td>
+                  <td className="py-2">{listing.hours.length ? listing.hours.join(", ") : <span className="text-slate-500">None</span>}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-slate-500 mt-2">Hours are shown to compare. Change them in Google itself, where each day is set separately.</p>
+          <Button className="mt-3" onClick={send} disabled={busy !== null || (!pick.phone && !pick.website)}>
+            {busy === "send" ? "Sending to Google…" : "Update the ticked lines on Google"}
+          </Button>
+        </>
+      )}
+    </div>
+  )
+}
+
 function FactSheet({ plan, communityId }: { plan: Plan; communityId: Id<"communities"> }) {
   const canAct = useCanAct()
   const save = useMutation(api.fixPlan.saveFacts)
@@ -197,6 +318,12 @@ function FactSheet({ plan, communityId }: { plan: Plan; communityId: Id<"communi
           </div>
         )}
       </form>
+      {canAct && plan.hasGoogle && <GoogleListing communityId={communityId} />}
+      {canAct && !plan.hasGoogle && (
+        <p className="mt-5 border-t border-slate-200 pt-4 text-sm text-slate-600">
+          Once this property&apos;s Google Business Profile is connected in Settings, you can send the phone and website from this fact sheet straight to the Google listing.
+        </p>
+      )}
     </section>
   )
 }

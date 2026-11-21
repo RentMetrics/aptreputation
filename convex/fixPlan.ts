@@ -73,6 +73,7 @@ export const get = query({
     return {
       name: community.name,
       address: community.address,
+      hasGoogle: !!community.gbpLocation,
       tasks,
       cleared,
       open: countable.filter((t) => t.status === "open").length,
