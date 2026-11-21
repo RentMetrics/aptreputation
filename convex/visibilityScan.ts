@@ -44,7 +44,18 @@ function hosts(urls: Iterable<string>): string[] {
   return [...out].slice(0, 12);
 }
 
+/** One more try when the provider has a passing server error; those clear within seconds. */
 async function postJson(url: string, headers: Record<string, string>, body: unknown, provider: string): Promise<any> {
+  try {
+    return await postOnce(url, headers, body, provider);
+  } catch (e) {
+    if (!(e instanceof Error) || !/failed \(5\d\d\)/.test(e.message)) throw e;
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    return await postOnce(url, headers, body, provider);
+  }
+}
+
+async function postOnce(url: string, headers: Record<string, string>, body: unknown, provider: string): Promise<any> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 180_000);
   try {
