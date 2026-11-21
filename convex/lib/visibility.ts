@@ -2,10 +2,17 @@
 // APIs here, so the browser can import the types and the tests can run the helpers.
 
 export type PromptKind = "need" | "name";
+export type AssistantKey = "chatgpt" | "gemini" | "claude";
 
-export type PromptResult = {
-  kind: PromptKind;
-  question: string;
+/** The assistants a check can ask, in the order they are shown. Each runs only when its API key is set. */
+export const ASSISTANTS: { key: AssistantKey; label: string }[] = [
+  { key: "chatgpt", label: "ChatGPT" },
+  { key: "gemini", label: "Gemini" },
+  { key: "claude", label: "Claude" },
+];
+
+export type AssistantAnswer = {
+  assistant: AssistantKey;
   /** The assistant's answer, trimmed for display. */
   answer: string;
   /** True when the answer names this property. */
@@ -26,6 +33,8 @@ export type PromptResult = {
   error?: string;
 };
 
+export type PromptResult = { kind: PromptKind; question: string; answers: AssistantAnswer[] };
+
 export type SiteCheck = {
   url: string;
   /** "ok", "blocked" (the site refused an automated reader) or "failed". */
@@ -42,24 +51,31 @@ export type SiteCheck = {
   hasLlmsTxt: boolean;
   /** AI crawlers the site's robots.txt turns away. */
   blockedCrawlers: string[];
+  /** True when at least one assistant cited the property's own website. */
+  citedByAssistant?: boolean;
 };
 
 export type Fix = { priority: "now" | "next"; title: string; why: string };
 
+export type AssistantTotal = { key: AssistantKey; label: string; shown: number; outOf: number };
+
 export type VisibilityResult = {
-  v: 1;
-  assistant: string;
+  v: 2;
+  /** One entry per assistant that answered, with how many searches by need named this property. */
+  assistants: AssistantTotal[];
   market: { city: string; state: string; zip: string } | null;
   google: { name: string; address: string; rating: number | null; totalReviews: number; phone: string | null; website: string | null };
   prompts: PromptResult[];
-  /** Of the searches by need, how many named this property. */
+  /** Across every assistant: searches by need that named this property, out of those answered. */
   shown: number;
   outOf: number;
-  /** Communities named most often across the searches by need, with a count. */
+  /** Communities named most often across the searches by need, with a count of answers. */
   competitors: { name: string; count: number }[];
   site: SiteCheck | null;
   fixes: Fix[];
 };
+
+export const labelOf = (key: AssistantKey) => ASSISTANTS.find((a) => a.key === key)?.label ?? key;
 
 export const AI_CRAWLERS = ["GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "PerplexityBot", "Google-Extended"];
 
@@ -170,48 +186,64 @@ export function readPage(html: string, phone: string | null): Pick<SiteCheck, "t
 /** The changes most likely to get the property named more often, from what the check found. */
 export function fixesFor(r: Omit<VisibilityResult, "fixes">): Fix[] {
   const fixes: Fix[] = [];
-  const byName = r.prompts.find((p) => p.kind === "name" && !p.error);
+  const byName = (r.prompts.find((p) => p.kind === "name")?.answers ?? []).filter((a) => !a.error);
   const g = r.google;
+  const list = (items: string[]) => (items.length > 1 ? `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}` : items[0] ?? "");
 
   if (r.outOf > 0 && r.shown < r.outOf) {
     const rated = g.rating !== null ? `${g.rating.toFixed(1)} stars from ${g.totalReviews.toLocaleString("en-US")} Google reviews` : "no Google rating yet";
+    const each = r.assistants.map((a) => `${a.label} ${a.shown} of ${a.outOf}`).join(", ");
     fixes.push({
       priority: "now",
       title: "Raise the Google rating and keep new reviews coming",
-      why: `This property was named in ${r.shown} of ${r.outOf} searches by need and has ${rated}. Assistants lean on star ratings and recent reviews when they pick a short list.`,
+      why: `This property was named in ${r.shown} of ${r.outOf} searches by need (${each}) and has ${rated}. Assistants lean on star ratings and recent reviews when they pick a short list.`,
     });
   }
-  if (byName?.statedPhone && g.phone && !samePhone(byName.statedPhone, g.phone)) {
+  const wrongPhone = byName.filter((a) => a.statedPhone && g.phone && !samePhone(a.statedPhone, g.phone));
+  if (wrongPhone.length) {
     fixes.push({
       priority: "now",
       title: "Make the leasing phone number the same everywhere",
-      why: `Asked about the property by name, the assistant gave ${byName.statedPhone}. Google shows ${g.phone}. Listing sites often assign their own numbers, and assistants repeat them.`,
+      why: `Asked about the property by name, ${list(wrongPhone.map((a) => `${labelOf(a.assistant)} gave ${a.statedPhone}`))}. Google shows ${g.phone}. Listing sites often assign their own numbers, and assistants repeat them.`,
     });
   }
-  const otherNames = [...new Set(r.prompts.map((p) => p.namedAs).filter((n): n is string => !!n))];
+  const otherNames = [...new Set(r.prompts.flatMap((p) => p.answers.map((a) => a.namedAs)).filter((n): n is string => !!n))];
   if (otherNames.length) {
     fixes.push({
       priority: "now",
       title: "Retire the other names this property is listed under",
-      why: `Answers referred to it as ${otherNames.join(", ")}. Ask each listing site to rename or redirect old pages, and state the former name once on the website so readers connect the two.`,
+      why: `Answers referred to it as ${list(otherNames)}. Ask each listing site to rename or redirect old pages, and state the former name once on the website so readers connect the two.`,
     });
   }
-  if (byName && (byName.tone === "negative" || byName.tone === "mixed")) {
+  const lowRating = byName.filter((a) => {
+    const stated = parseFloat(a.statedRating ?? "");
+    return g.rating !== null && stated >= 1 && stated <= 5 && g.rating - stated >= 1;
+  });
+  if (lowRating.length) {
+    fixes.push({
+      priority: "now",
+      title: "Fix the low rating assistants are quoting",
+      why: `${list(lowRating.map((a) => `${labelOf(a.assistant)} quoted "${a.statedRating}"`))}, while Google shows ${g.rating!.toFixed(1)}. That figure comes from a listing site with very few reviews, where a handful of new reviews changes it quickly.`,
+    });
+  }
+  const critical = byName.filter((a) => a.tone === "negative" || a.tone === "mixed");
+  if (critical.length) {
     fixes.push({
       priority: "next",
       title: "Give assistants something current to quote",
-      why: `Asked by name, the description was ${byName.tone}: ${byName.note} Recent reviews and a dated page on what has been repaired or improved replace older complaints over time.`,
+      why: `Asked by name, ${list(critical.map((a) => labelOf(a.assistant)))} gave a ${critical.some((a) => a.tone === "negative") ? "negative" : "mixed"} description. ${critical[0].note} Recent reviews and a dated page on what has been repaired or improved replace older complaints over time.`,
     });
   }
   const s = r.site;
   if (!g.website) {
     fixes.push({ priority: "now", title: "Add the website to the Google listing", why: "Google shows no website for this property, so assistants have no official page to read." });
   } else if (s) {
-    if (s.status === "blocked") {
+    // An assistant that cited the site got in, so a refusal of our reader is not a problem for them.
+    if (s.status === "blocked" && !s.citedByAssistant) {
       fixes.push({
         priority: "next",
         title: "Confirm the website lets AI crawlers in",
-        why: "The site turned away our automated reader. That is often a bot shield that also turns away AI crawlers. Ask the web vendor to allow GPTBot, OAI-SearchBot, ClaudeBot and PerplexityBot.",
+        why: "The site turned away our automated reader and no assistant cited it. That is often a bot shield that also turns away AI crawlers. Ask the web vendor to allow GPTBot, OAI-SearchBot, ClaudeBot and PerplexityBot.",
       });
     }
     if (s.blockedCrawlers.length) {

@@ -8,72 +8,159 @@ import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { placeContact } from "./lib/google";
 import {
+  ASSISTANTS,
   blockedCrawlers,
   fixesFor,
   marketOf,
   questionsFor,
   readPage,
-  type PromptKind,
+  type AssistantAnswer,
+  type AssistantKey,
   type PromptResult,
   type SiteCheck,
   type VisibilityResult,
 } from "./lib/visibility";
 
-const MODEL = "claude-opus-5-5";
-const ASSISTANT_LABEL = "Claude with web search";
+const CLAUDE_MODEL = "claude-opus-5-5";
+// Overridable in the Convex environment when either provider renames its models.
+const OPENAI_MODEL = () => process.env.OPENAI_MODEL || "gpt-6.2-astra";
+const GEMINI_MODEL = () => process.env.GEMINI_MODEL || "gemini-3.8-flash";
 
-// The assistant is asked the way a renter would ask, with no mention of the
+// Each assistant is asked the way a renter would ask, with no mention of the
 // property being checked, so the answer is the one a renter would get.
 const RENTER_SYSTEM = `You are a general-purpose AI assistant. Someone looking for an apartment asks you a question. Search the web and answer as you normally would: name specific apartment communities and give the facts you found for each, such as rent, rating and anything notable. Keep the answer under 250 words.`;
 
 type Answer = { text: string; sources: string[] };
 
-async function askAsRenter(client: Anthropic, question: string): Promise<Answer> {
+function hosts(urls: Iterable<string>): string[] {
+  const out = new Set<string>();
+  for (const u of urls) {
+    try {
+      out.add(new URL(u).hostname.replace(/^www\./, ""));
+    } catch {
+      // Not a usable address; leave it out.
+    }
+  }
+  return [...out].slice(0, 12);
+}
+
+async function postJson(url: string, headers: Record<string, string>, body: unknown, provider: string): Promise<any> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 180_000);
+  try {
+    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify(body), signal: controller.signal });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      // The detail is for us; the person reading the result only needs to know there was no answer.
+      console.warn(`${provider} request failed`, res.status, data?.error?.message);
+      throw new Error(
+        res.status === 429 ? `${provider} is over its usage allowance.`
+        : res.status === 401 || res.status === 403 ? `${provider} did not accept the API key.`
+        : `${provider} request failed (${res.status}).`,
+      );
+    }
+    return data;
+  } catch (e) {
+    if (e instanceof Error && e.name === "AbortError") throw new Error(`${provider} took too long to answer.`);
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function askClaude(question: string): Promise<Answer> {
+  const client = new Anthropic();
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: question }];
   const text: string[] = [];
   const cited = new Set<string>();
   const searched = new Set<string>();
-  // A long search turn can pause; sending it back lets the server continue.
-  for (let round = 0; round < 4; round++) {
-    const res = await client.messages.create({
-      model: MODEL,
-      max_tokens: 6000,
-      output_config: { effort: "low" },
-      system: RENTER_SYSTEM,
-      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 4 }],
-      messages,
-    });
-    if (res.stop_reason === "refusal") throw new Error("The assistant declined to answer.");
-    for (const block of res.content) {
-      // Text written before a search is the assistant thinking aloud, not the answer.
-      if (block.type === "server_tool_use" || block.type === "web_search_tool_result") text.length = 0;
-      if (block.type === "text") {
-        text.push(block.text);
-        for (const c of block.citations ?? []) {
-          if (c.type === "web_search_result_location") cited.add(c.url);
+  try {
+    // A long search turn can pause; sending it back lets the server continue.
+    for (let round = 0; round < 4; round++) {
+      const res = await client.messages.create({
+        model: CLAUDE_MODEL,
+        max_tokens: 6000,
+        output_config: { effort: "low" },
+        system: RENTER_SYSTEM,
+        tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 4 }],
+        messages,
+      });
+      if (res.stop_reason === "refusal") throw new Error("Claude declined to answer.");
+      for (const block of res.content) {
+        // Text written before a search is the assistant thinking aloud, not the answer.
+        if (block.type === "server_tool_use" || block.type === "web_search_tool_result") text.length = 0;
+        if (block.type === "text") {
+          text.push(block.text);
+          for (const c of block.citations ?? []) {
+            if (c.type === "web_search_result_location") cited.add(c.url);
+          }
+        } else if (block.type === "web_search_tool_result" && Array.isArray(block.content)) {
+          for (const r of block.content) searched.add(r.url);
         }
-      } else if (block.type === "web_search_tool_result" && Array.isArray(block.content)) {
-        for (const r of block.content) searched.add(r.url);
       }
+      if (res.stop_reason !== "pause_turn") break;
+      messages.push({ role: "assistant", content: res.content });
     }
-    if (res.stop_reason !== "pause_turn") break;
-    messages.push({ role: "assistant", content: res.content });
+  } catch (e) {
+    if (e instanceof Anthropic.APIError) throw new Error(`Claude request failed (${e.status}).`);
+    throw e;
   }
-  const hosts = (urls: Set<string>) => {
-    const out = new Set<string>();
-    for (const u of urls) {
-      try {
-        out.add(new URL(u).hostname.replace(/^www\./, ""));
-      } catch {
-        // Not a usable address; leave it out.
-      }
-    }
-    return [...out];
-  };
   // Prefer what the answer cited; fall back to what the search returned.
-  const sources = hosts(cited.size ? cited : searched).slice(0, 12);
-  return { text: text.join("").trim(), sources };
+  return { text: text.join("").trim(), sources: hosts(cited.size ? cited : searched) };
 }
+
+async function askChatGpt(question: string): Promise<Answer> {
+  const data = await postJson(
+    "https://api.openai.com/v1/responses",
+    { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+    { model: OPENAI_MODEL(), instructions: RENTER_SYSTEM, tools: [{ type: "web_search" }], reasoning: { effort: "low" }, input: question },
+    "ChatGPT",
+  );
+  const text: string[] = [];
+  const cited: string[] = [];
+  for (const item of data.output ?? []) {
+    if (item.type !== "message") continue;
+    for (const part of item.content ?? []) {
+      if (part.type !== "output_text") continue;
+      text.push(part.text ?? "");
+      for (const a of part.annotations ?? []) if (a.type === "url_citation" && a.url) cited.push(a.url);
+    }
+  }
+  return { text: text.join("").trim(), sources: hosts(cited) };
+}
+
+async function askGemini(question: string): Promise<Answer> {
+  const data = await postJson(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL()}:generateContent`,
+    { "x-goog-api-key": process.env.GEMINI_API_KEY ?? "" },
+    {
+      system_instruction: { parts: [{ text: RENTER_SYSTEM }] },
+      contents: [{ role: "user", parts: [{ text: question }] }],
+      tools: [{ google_search: {} }],
+    },
+    "Gemini",
+  );
+  const candidate = data.candidates?.[0];
+  const text = (candidate?.content?.parts ?? [])
+    .filter((p: any) => typeof p.text === "string" && !p.thought)
+    .map((p: any) => p.text)
+    .join("")
+    .trim();
+  if (!text) throw new Error(candidate?.finishReason ? `Gemini returned no answer (${candidate.finishReason}).` : "Gemini returned no answer.");
+  // Gemini's source links are redirects; the title carries the site's name.
+  const sites = new Set<string>();
+  for (const chunk of candidate?.groundingMetadata?.groundingChunks ?? []) {
+    const title = chunk?.web?.title;
+    if (typeof title === "string" && /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(title.trim())) sites.add(title.trim().toLowerCase().replace(/^www\./, ""));
+  }
+  return { text, sources: [...sites].slice(0, 12) };
+}
+
+const ASK: Record<AssistantKey, { ready: () => boolean; ask: (question: string) => Promise<Answer> }> = {
+  chatgpt: { ready: () => !!process.env.OPENAI_API_KEY, ask: askChatGpt },
+  gemini: { ready: () => !!process.env.GEMINI_API_KEY, ask: askGemini },
+  claude: { ready: () => !!process.env.ANTHROPIC_API_KEY, ask: askClaude },
+};
 
 const ReadingSchema = z.object({
   readings: z.array(
@@ -92,23 +179,24 @@ const ReadingSchema = z.object({
   ),
 });
 
-const READING_SYSTEM = `You read answers an AI assistant gave to renter questions and record how one apartment community, the target, appears in each. Work only from the answer text.
+const READING_SYSTEM = `You read answers that AI assistants gave to renter questions and record how one apartment community, the target, appears in each. Work only from the answer text.
 For each answer return:
 - index: the answer's index, unchanged.
 - communities: the apartment communities the answer recommends or lists, in the order given, by name only.
 - mentioned: true if the answer names the target. Match on the address or on an obvious former or alternate name for the same property too, but not a different community with a similar name at another address.
 - position: where the target falls in the answer's list, 1 for first. Null if it is not named or the answer is not a list.
 - namedAs: the name the answer used for the target when it differs from the target's name, otherwise null.
-- statedPhone, statedRent, statedRating: what the answer states for the target, copied as written, otherwise null.
+- statedPhone, statedRent: what the answer states for the target, copied as written, otherwise null.
+- statedRating: the rating the answer gives for the target, starting with the number, for example "1.0 from 3 reviews on Apartments.com". If it gives several, use the one it leads with. Otherwise null.
 - tone: how the answer describes the target. "none" when it is not named.
 - note: one plain sentence. If the target is named, how it is described. If not, what the answer recommended instead.
 Return one reading per answer.`;
 
-async function readAnswers(client: Anthropic, target: { name: string; address: string }, answers: { index: number; question: string; text: string }[]) {
+async function readAnswers(target: { name: string; address: string }, answers: { index: number; question: string; text: string }[]) {
   const body = answers.map((a) => `<answer index="${a.index}">\n<question>${a.question}</question>\n${a.text}\n</answer>`).join("\n\n");
-  const res = await client.messages.parse({
-    model: MODEL,
-    max_tokens: 8000,
+  const res = await new Anthropic().messages.parse({
+    model: CLAUDE_MODEL,
+    max_tokens: 16000,
     output_config: { effort: "low", format: zodOutputFormat(ReadingSchema) },
     system: READING_SYSTEM,
     messages: [{ role: "user", content: `Target: ${target.name}\nTarget address: ${target.address}\n\n${body}` }],
@@ -158,63 +246,81 @@ export const run = internalAction({
     if (!found) return null;
     const { community } = found;
     try {
+      // The answers are read into a table by Claude, so its key is needed whichever assistants are asked.
       if (!process.env.ANTHROPIC_API_KEY) throw new Error("AI is not configured yet (ANTHROPIC_API_KEY).");
       const market = marketOf(community.address);
       if (!market) throw new Error("This property's address has no city and ZIP code, so renter questions cannot be written for it.");
-      const client = new Anthropic();
       const questions = questionsFor(community.name, market);
+      const active = ASSISTANTS.filter((a) => ASK[a.key].ready());
 
       const contact = await placeContact(community.googlePlaceId).catch(() => ({ website: undefined, phone: undefined }));
-      const [answers, site] = await Promise.all([
+      // One cell per question and assistant, all asked at once.
+      const cells = questions.flatMap((q, qi) => active.map((a) => ({ qi, key: a.key, question: q.question })));
+      const [raw, siteRaw] = await Promise.all([
         Promise.all(
-          questions.map((q) =>
-            askAsRenter(client, q.question).then(
-              (a) => ({ ...a, error: undefined as string | undefined }),
-              (e) => ({ text: "", sources: [] as string[], error: e instanceof Anthropic.APIError ? `AI request failed (${e.status}).` : String(e?.message ?? e) }),
+          cells.map((c) =>
+            ASK[c.key].ask(c.question).then(
+              (a) => ({ ...a, error: a.text ? undefined : "No answer came back." }),
+              (e) => ({ text: "", sources: [] as string[], error: String(e instanceof Error ? e.message : e).slice(0, 200) }),
             ),
           ),
         ),
         contact.website ? checkSite(contact.website, contact.phone ?? null).catch(() => null) : Promise.resolve(null),
       ]);
 
-      const answered = answers.map((a, index) => ({ index, question: questions[index].question, text: a.text })).filter((a) => a.text);
-      if (answered.length === 0) throw new Error(answers[0]?.error ?? "The assistant returned no answers.");
-      const readings = await readAnswers(client, { name: community.name, address: community.address }, answered);
+      const answered = cells.map((c, index) => ({ index, question: c.question, text: raw[index].text })).filter((a) => a.text);
+      if (answered.length === 0) throw new Error(raw.find((r) => r.error)?.error ?? "No assistant returned an answer.");
+      const readings = await readAnswers({ name: community.name, address: community.address }, answered);
 
-      const prompts: PromptResult[] = questions.map((q, index) => {
-        const a = answers[index];
-        const r = readings.find((x) => x.index === index);
-        const kind: PromptKind = q.kind;
-        return {
-          kind,
-          question: q.question,
-          answer: a.text.slice(0, 2500),
-          mentioned: r?.mentioned ?? false,
-          position: r?.position ?? null,
-          communities: (r?.communities ?? []).slice(0, 12),
-          namedAs: r?.namedAs ?? null,
-          statedPhone: r?.statedPhone ?? null,
-          statedRent: r?.statedRent ?? null,
-          statedRating: r?.statedRating ?? null,
-          tone: r?.tone ?? "none",
-          note: r?.note ?? "",
-          sources: a.sources,
-          error: a.error ?? (a.text && !r ? "This answer could not be read." : undefined),
-        };
-      });
+      const prompts: PromptResult[] = questions.map((q, qi) => ({
+        kind: q.kind,
+        question: q.question,
+        answers: cells
+          .map((c, index) => ({ c, index }))
+          .filter(({ c }) => c.qi === qi)
+          .map(({ c, index }): AssistantAnswer => {
+            const a = raw[index];
+            const r = readings.find((x) => x.index === index);
+            return {
+              assistant: c.key,
+              answer: a.text.slice(0, 2500),
+              mentioned: r?.mentioned ?? false,
+              position: r?.position ?? null,
+              communities: (r?.communities ?? []).slice(0, 12),
+              namedAs: r?.namedAs ?? null,
+              statedPhone: r?.statedPhone ?? null,
+              statedRent: r?.statedRent ?? null,
+              statedRating: r?.statedRating ?? null,
+              tone: r?.tone ?? "none",
+              note: r?.note ?? "",
+              sources: a.sources,
+              error: a.error ?? (r ? undefined : "This answer could not be read."),
+            };
+          }),
+      }));
 
-      const need = prompts.filter((p) => p.kind === "need" && !p.error);
+      const needAnswers = prompts.filter((p) => p.kind === "need").flatMap((p) => p.answers).filter((a) => !a.error);
       const counts = new Map<string, { name: string; count: number }>();
-      for (const p of need) {
-        for (const name of new Set(p.communities)) {
+      for (const a of needAnswers) {
+        for (const name of new Set(a.communities.map((n) => n.trim()))) {
           const key = name.toLowerCase();
-          if (key === community.name.toLowerCase() || (p.namedAs && key === p.namedAs.toLowerCase())) continue;
-          counts.set(key, { name, count: (counts.get(key)?.count ?? 0) + 1 });
+          if (key === community.name.toLowerCase() || (a.namedAs && key === a.namedAs.toLowerCase())) continue;
+          counts.set(key, { name: counts.get(key)?.name ?? name, count: (counts.get(key)?.count ?? 0) + 1 });
         }
       }
+      let site = siteRaw;
+      if (site) {
+        const host = new URL(site.url).hostname.replace(/^www\./, "");
+        site = { ...site, citedByAssistant: prompts.some((p) => p.answers.some((a) => a.sources.includes(host))) };
+      }
       const base: Omit<VisibilityResult, "fixes"> = {
-        v: 1,
-        assistant: ASSISTANT_LABEL,
+        v: 2,
+        assistants: active
+          .map((a) => {
+            const mine = needAnswers.filter((x) => x.assistant === a.key);
+            return { key: a.key, label: a.label, shown: mine.filter((x) => x.mentioned).length, outOf: mine.length };
+          })
+          .filter((a) => a.outOf > 0),
         market,
         google: {
           name: community.name,
@@ -225,9 +331,9 @@ export const run = internalAction({
           website: contact.website ?? null,
         },
         prompts,
-        shown: need.filter((p) => p.mentioned).length,
-        outOf: need.length,
-        competitors: [...counts.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)).slice(0, 8),
+        shown: needAnswers.filter((a) => a.mentioned).length,
+        outOf: needAnswers.length,
+        competitors: [...counts.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)).slice(0, 10),
         site,
       };
       const result: VisibilityResult = { ...base, fixes: fixesFor(base) };
