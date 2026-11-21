@@ -89,6 +89,20 @@ export default defineSchema({
     lastSyncAt: v.optional(v.number()),
     lastSyncSource: v.optional(v.union(v.literal("places"), v.literal("business"))),
     lastSyncError: v.optional(v.string()),
+    // The facts every listing should agree on, kept by the property's team.
+    facts: v.optional(
+      v.object({
+        phone: v.optional(v.string()),
+        website: v.optional(v.string()),
+        hours: v.optional(v.string()),
+        bedrooms: v.optional(v.string()),
+        rent: v.optional(v.string()),
+        special: v.optional(v.string()),
+        pets: v.optional(v.string()),
+        formerNames: v.optional(v.string()),
+        updatedAt: v.number(),
+      }),
+    ),
     createdAt: v.number(),
   })
     .index("by_owner", ["ownerId"])
@@ -368,10 +382,27 @@ export default defineSchema({
     startedBy: v.id("users"),
     startedAt: v.number(),
     status: v.union(v.literal("running"), v.literal("done"), v.literal("failed")),
+    // True for the monthly check AptReputation starts itself; those send a summary email.
+    auto: v.optional(v.boolean()),
     finishedAt: v.optional(v.number()),
     error: v.optional(v.string()),
     result: v.optional(v.string()), // JSON, see convex/lib/visibility.ts
   }).index("by_community", ["communityId", "startedAt"]),
+
+  // Fix plan: one row per thing to fix at a property. Rows are opened and
+  // cleared by the AI search check; people mark their part done in between.
+  fixTasks: defineTable({
+    communityId: v.id("communities"),
+    key: v.string(),
+    status: v.union(v.literal("open"), v.literal("done"), v.literal("cleared")),
+    assignee: v.optional(v.string()),
+    doneAt: v.optional(v.number()),
+    doneBy: v.optional(v.id("users")),
+    clearedAt: v.optional(v.number()),
+    // Set when a check still shows the problem after someone marked it done.
+    reopenedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index("by_community", ["communityId"]),
 
   usage: defineTable({
     key: v.string(), // e.g. "audit:2026-11-10"

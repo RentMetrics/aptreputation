@@ -55,7 +55,7 @@ export type SiteCheck = {
   citedByAssistant?: boolean;
 };
 
-export type Fix = { priority: "now" | "next"; title: string; why: string };
+export type Fix = { key: string; priority: "now" | "next"; title: string; why: string };
 
 export type AssistantTotal = { key: AssistantKey; label: string; shown: number; outOf: number };
 
@@ -195,7 +195,7 @@ export function fixesFor(r: Omit<VisibilityResult, "fixes">): Fix[] {
     const each = r.assistants.map((a) => `${a.label} ${a.shown} of ${a.outOf}`).join(", ");
     fixes.push({
       priority: "now",
-      title: "Raise the Google rating and keep new reviews coming",
+      key: "google-rating", title: "Raise the Google rating and keep new reviews coming",
       why: `This property was named in ${r.shown} of ${r.outOf} searches by need (${each}) and has ${rated}. Assistants lean on star ratings and recent reviews when they pick a short list.`,
     });
   }
@@ -203,7 +203,7 @@ export function fixesFor(r: Omit<VisibilityResult, "fixes">): Fix[] {
   if (wrongPhone.length) {
     fixes.push({
       priority: "now",
-      title: "Make the leasing phone number the same everywhere",
+      key: "phone", title: "Make the leasing phone number the same everywhere",
       why: `Asked about the property by name, ${list(wrongPhone.map((a) => `${labelOf(a.assistant)} gave ${a.statedPhone}`))}. Google shows ${g.phone}. Listing sites often assign their own numbers, and assistants repeat them.`,
     });
   }
@@ -211,7 +211,7 @@ export function fixesFor(r: Omit<VisibilityResult, "fixes">): Fix[] {
   if (otherNames.length) {
     fixes.push({
       priority: "now",
-      title: "Retire the other names this property is listed under",
+      key: "names", title: "Retire the other names this property is listed under",
       why: `Answers referred to it as ${list(otherNames)}. Ask each listing site to rename or redirect old pages, and state the former name once on the website so readers connect the two.`,
     });
   }
@@ -222,7 +222,7 @@ export function fixesFor(r: Omit<VisibilityResult, "fixes">): Fix[] {
   if (lowRating.length) {
     fixes.push({
       priority: "now",
-      title: "Fix the low rating assistants are quoting",
+      key: "low-rating", title: "Fix the low rating assistants are quoting",
       why: `${list(lowRating.map((a) => `${labelOf(a.assistant)} quoted "${a.statedRating}"`))}, while Google shows ${g.rating!.toFixed(1)}. That figure comes from a listing site with very few reviews, where a handful of new reviews changes it quickly.`,
     });
   }
@@ -230,34 +230,34 @@ export function fixesFor(r: Omit<VisibilityResult, "fixes">): Fix[] {
   if (critical.length) {
     fixes.push({
       priority: "next",
-      title: "Give assistants something current to quote",
+      key: "current-story", title: "Give assistants something current to quote",
       why: `Asked by name, ${list(critical.map((a) => labelOf(a.assistant)))} gave a ${critical.some((a) => a.tone === "negative") ? "negative" : "mixed"} description. ${critical[0].note} Recent reviews and a dated page on what has been repaired or improved replace older complaints over time.`,
     });
   }
   const s = r.site;
   if (!g.website) {
-    fixes.push({ priority: "now", title: "Add the website to the Google listing", why: "Google shows no website for this property, so assistants have no official page to read." });
+    fixes.push({ priority: "now", key: "google-website", title: "Add the website to the Google listing", why: "Google shows no website for this property, so assistants have no official page to read." });
   } else if (s) {
     // An assistant that cited the site got in, so a refusal of our reader is not a problem for them.
     if (s.status === "blocked" && !s.citedByAssistant) {
       fixes.push({
         priority: "next",
-        title: "Confirm the website lets AI crawlers in",
+        key: "site-blocked", title: "Confirm the website lets AI crawlers in",
         why: "The site turned away our automated reader and no assistant cited it. That is often a bot shield that also turns away AI crawlers. Ask the web vendor to allow GPTBot, OAI-SearchBot, ClaudeBot and PerplexityBot.",
       });
     }
     if (s.blockedCrawlers.length) {
-      fixes.push({ priority: "now", title: "Stop turning AI crawlers away", why: `The site's robots.txt blocks ${s.blockedCrawlers.join(", ")}, so those assistants cannot read the property's own page.` });
+      fixes.push({ priority: "now", key: "site-robots", title: "Stop turning AI crawlers away", why: `The site's robots.txt blocks ${s.blockedCrawlers.join(", ")}, so those assistants cannot read the property's own page.` });
     }
     if (s.status === "ok") {
       if (s.textLength < 600) {
-        fixes.push({ priority: "now", title: "Put the page's content in plain text", why: "A text-only reader gets almost nothing from the home page, which usually means the content is drawn by scripts. Assistants read the plain text." });
+        fixes.push({ priority: "now", key: "site-text", title: "Put the page's content in plain text", why: "A text-only reader gets almost nothing from the home page, which usually means the content is drawn by scripts. Assistants read the plain text." });
       }
-      if (!s.showsRent) fixes.push({ priority: "next", title: "Show rent on the website", why: "No rent figure appears in the home page text. Assistants answer price questions from listing sites instead, which are often out of date." });
-      if (!s.mentionsPets) fixes.push({ priority: "next", title: "State the pet policy on the website", why: "The home page says nothing about pets, a common filter in renter questions." });
-      if (!s.description) fixes.push({ priority: "next", title: "Add a page description", why: "The home page has no description tag, the one-line summary search engines and assistants show." });
+      if (!s.showsRent) fixes.push({ priority: "next", key: "site-rent", title: "Show rent on the website", why: "No rent figure appears in the home page text. Assistants answer price questions from listing sites instead, which are often out of date." });
+      if (!s.mentionsPets) fixes.push({ priority: "next", key: "site-pets", title: "State the pet policy on the website", why: "The home page says nothing about pets, a common filter in renter questions." });
+      if (!s.description) fixes.push({ priority: "next", key: "site-description", title: "Add a page description", why: "The home page has no description tag, the one-line summary search engines and assistants show." });
       if (!s.schemaTypes.some((t) => /Apartment|Residence|LocalBusiness|Place/i.test(t))) {
-        fixes.push({ priority: "next", title: "Add apartment structured data", why: "The home page has no structured data naming it as an apartment community with its address and phone." });
+        fixes.push({ priority: "next", key: "site-schema", title: "Add apartment structured data", why: "The home page has no structured data naming it as an apartment community with its address and phone." });
       }
     }
   }

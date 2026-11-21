@@ -142,7 +142,8 @@ export function VisibilityTab({ communityId }: { communityId: Id<"communities"> 
 
       {result && result.fixes.length > 0 && (
         <section className="bg-white border border-slate-200 rounded-xl p-5">
-          <h2 className="text-lg font-semibold mb-3">What to fix</h2>
+          <h2 className="text-lg font-semibold">What to fix</h2>
+          <p className="text-sm text-slate-600 mb-3">The Fix plan tab has the steps for each of these.</p>
           <ul className="space-y-3">
             {result.fixes.map((f, i) => (
               <li key={i} className="flex gap-3">

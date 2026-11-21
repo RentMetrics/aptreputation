@@ -123,6 +123,52 @@ ${r.themes?.length ? `<p style="margin:8px 0 0;font-size:13px;color:#5b6b7f">Top
   },
 });
 
+// ---- monthly AI search check -------------------------------------------------
+
+/** After an automatic monthly check: how often the property was named, what changed, and what is open. */
+export const checkSummary = internalAction({
+  args: { scanId: v.id("visibilityScans") },
+  handler: async (ctx, { scanId }): Promise<null> => {
+    const data = await ctx.runQuery(internal.visibility.summaryContext, { scanId });
+    if (!data || data.recipients.length === 0 || !emailConfigured()) return null;
+    const counts = (json: string | null) => {
+      try {
+        const r = json ? JSON.parse(json) : null;
+        return r?.v === 2 ? { shown: r.shown as number, outOf: r.outOf as number, assistants: r.assistants as { label: string; shown: number; outOf: number }[] } : null;
+      } catch {
+        return null;
+      }
+    };
+    const now = counts(data.result);
+    if (!now) return null;
+    const before = counts(data.previous);
+    const subject = `${data.name}: named in ${now.shown} of ${now.outOf} AI searches this month`;
+    const rows = now.assistants
+      .map((a) => `<tr><td style="padding:6px 16px 6px 0;font-size:15px">${esc(a.label)}</td><td style="padding:6px 0;font-size:15px;font-weight:600">${a.shown} of ${a.outOf}</td></tr>`)
+      .join("");
+    const html = layout(
+      esc(subject),
+      `<p style="font-size:15px;line-height:1.5;margin:0 0 12px">We asked AI assistants the questions renters ask about apartments near ${esc(data.name)}. ${
+        before ? `Last time it was named in ${before.shown} of ${before.outOf}.` : "This is the first check, so it is your starting point."
+      }</p>
+<table style="border-collapse:collapse;margin:0 0 12px">${rows}</table>
+<p style="font-size:15px;line-height:1.5;margin:0">${
+        data.open > 0 ? `${data.open} fix${data.open === 1 ? " is" : "es are"} open on the plan, each with the steps to take.` : "Nothing new to fix came out of this check."
+      } Answers vary from one run to the next, so judge the trend over a few months.</p>
+${button(`${appUrl()}/dashboard/property/${data.communityId}`, "Open the fix plan")}`,
+      `You get this monthly summary because you own or manage ${esc(data.name)}. Change or turn off alerts in the property's Settings tab.`,
+    );
+    for (const to of data.recipients) {
+      try {
+        await send(to, subject, html);
+      } catch (e) {
+        console.error("Monthly check email failed for one recipient", e);
+      }
+    }
+    return null;
+  },
+});
+
 // ---- invitations and test ---------------------------------------------------
 
 export const sendInvite = internalAction({

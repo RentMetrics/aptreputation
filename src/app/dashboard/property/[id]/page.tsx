@@ -11,6 +11,7 @@ import { Stars } from "@/components/stars"
 import { ReviewsTab } from "@/components/property/reviews-tab"
 import { InsightsTab } from "@/components/property/insights-tab"
 import { VisibilityTab } from "@/components/property/visibility-tab"
+import { FixPlanTab } from "@/components/property/fix-plan-tab"
 import { ProgressTab } from "@/components/property/progress-tab"
 import { RequestsTab } from "@/components/property/requests-tab"
 import { TeamTab } from "@/components/property/team-tab"
@@ -20,6 +21,7 @@ import { formatDate } from "@/lib/format"
 
 const TABS = [
   { key: "reviews", label: "Reviews" },
+  { key: "plan", label: "Fix plan" },
   { key: "progress", label: "Progress" },
   { key: "insights", label: "Insights" },
   { key: "ai", label: "AI search" },
@@ -104,6 +106,7 @@ export default function PropertyPage() {
       {tab === "reviews" && <ReviewsTab communityId={communityId} linked={!!community.gbpLocation} placeId={community.googlePlaceId} />}
       {tab === "progress" && <ProgressTab communityId={communityId} />}
       {tab === "insights" && <InsightsTab communityId={communityId} />}
+      {tab === "plan" && <FixPlanTab communityId={communityId} onOpenTab={setTab} />}
       {tab === "ai" && <VisibilityTab communityId={communityId} />}
       {tab === "requests" && <RequestsTab communityId={communityId} />}
       {tab === "team" && <TeamTab communityId={communityId} />}
