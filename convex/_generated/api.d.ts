@@ -19,6 +19,8 @@ import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_google from "../lib/google.js";
 import type * as lib_outreachCopy from "../lib/outreachCopy.js";
+import type * as lib_scoreEmail from "../lib/scoreEmail.js";
+import type * as lib_visibility from "../lib/visibility.js";
 import type * as members from "../members.js";
 import type * as notify from "../notify.js";
 import type * as outreach from "../outreach.js";
@@ -27,6 +29,8 @@ import type * as reviews from "../reviews.js";
 import type * as staff from "../staff.js";
 import type * as tags from "../tags.js";
 import type * as users from "../users.js";
+import type * as visibility from "../visibility.js";
+import type * as visibilityScan from "../visibilityScan.js";
 
 import type {
   ApiFromModules,
@@ -46,6 +50,8 @@ declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
   "lib/google": typeof lib_google;
   "lib/outreachCopy": typeof lib_outreachCopy;
+  "lib/scoreEmail": typeof lib_scoreEmail;
+  "lib/visibility": typeof lib_visibility;
   members: typeof members;
   notify: typeof notify;
   outreach: typeof outreach;
@@ -54,6 +60,8 @@ declare const fullApi: ApiFromModules<{
   staff: typeof staff;
   tags: typeof tags;
   users: typeof users;
+  visibility: typeof visibility;
+  visibilityScan: typeof visibilityScan;
 }>;
 
 /**

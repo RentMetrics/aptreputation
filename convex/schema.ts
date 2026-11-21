@@ -362,6 +362,17 @@ export default defineSchema({
     at: v.number(),
   }).index("by_email", ["email"]),
 
+  // AI search check: how AI assistants answer renter questions about a property.
+  visibilityScans: defineTable({
+    communityId: v.id("communities"),
+    startedBy: v.id("users"),
+    startedAt: v.number(),
+    status: v.union(v.literal("running"), v.literal("done"), v.literal("failed")),
+    finishedAt: v.optional(v.number()),
+    error: v.optional(v.string()),
+    result: v.optional(v.string()), // JSON, see convex/lib/visibility.ts
+  }).index("by_community", ["communityId", "startedAt"]),
+
   usage: defineTable({
     key: v.string(), // e.g. "audit:2026-11-10"
     count: v.number(),

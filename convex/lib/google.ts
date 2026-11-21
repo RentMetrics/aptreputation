@@ -150,6 +150,16 @@ export async function placeDetails(placeId: string): Promise<PlaceDetails> {
   };
 }
 
+/** The website and phone number Google shows for a place. Billed as contact data, so only fetched for the AI search check. */
+export async function placeContact(placeId: string): Promise<{ website?: string; phone?: string }> {
+  const res = await fetch(
+    `${PLACES}/details/json?place_id=${encodeURIComponent(placeId)}&fields=website,formatted_phone_number&key=${mapsKey()}`,
+  );
+  const data = await res.json();
+  if (data.status !== "OK") throw new ConvexError(`Google Places lookup failed: ${data.status}`);
+  return { website: data.result?.website, phone: data.result?.formatted_phone_number };
+}
+
 export type NearbyCommunity = { placeId: string; name: string; rating: number; totalReviews: number; miles: number };
 
 function milesBetween(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
