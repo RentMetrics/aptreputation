@@ -66,7 +66,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <GoogleNotice />
       </Suspense>
 
-      {me && !me.subscribed && me.role !== "admin" && (
+      {me && !me.subscribed && !me.free && me.role !== "admin" && (
         <div className={`px-4 py-2.5 text-sm ${me.inTrial ? "bg-blue-50 text-blue-900" : "bg-amber-50 text-amber-900"}`}>
           <div className="max-w-6xl mx-auto px-1 flex flex-wrap items-center gap-x-3 gap-y-1">
             <span>

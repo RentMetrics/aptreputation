@@ -73,7 +73,17 @@ export async function requireResponder(ctx: QueryCtx | MutationCtx, communityId:
   return access;
 }
 
+/** Accounts listed in FREE_ACCOUNTS (comma-separated emails) get every feature with no trial clock and no subscription. */
+function isFreeAccount(email: string) {
+  const list = (process.env.FREE_ACCOUNTS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return !!email && list.includes(email.toLowerCase());
+}
+
 export function accessState(user: Doc<"users">, now: number) {
+  const free = isFreeAccount(user.email);
   const trialEndsAt = user.createdAt + TRIAL_DAYS * DAY;
   const subscribed = user.subscriptionStatus === "active" || user.subscriptionStatus === "trialing";
   const inTrial = now < trialEndsAt;
@@ -81,7 +91,8 @@ export function accessState(user: Doc<"users">, now: number) {
     subscribed,
     inTrial,
     trialEndsAt,
-    active: user.role === "admin" || subscribed || inTrial,
+    free,
+    active: user.role === "admin" || free || subscribed || inTrial,
   };
 }
 

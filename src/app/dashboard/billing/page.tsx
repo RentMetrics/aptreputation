@@ -57,7 +57,9 @@ export default function BillingPage() {
         </ul>
 
         <div className="mt-6 pt-5 border-t">
-          {me.subscribed ? (
+          {me.free && !me.subscribed ? (
+            <p className="font-medium text-emerald-800">Complimentary account: every feature is on for all your properties, with no subscription needed.</p>
+          ) : me.subscribed ? (
             <>
               <p className="font-medium text-emerald-800">
                 Subscription {me.subscriptionStatus === "trialing" ? "in trial" : "active"} · billed for {count} propert{count === 1 ? "y" : "ies"}

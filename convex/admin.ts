@@ -18,6 +18,7 @@ export const overview = query({
     const status = (u: (typeof users)[number]) => {
       if (u.role === "admin") return "admin";
       const a = accessState(u, now);
+      if (a.free) return "free account";
       if (u.subscriptionStatus) return u.subscriptionStatus;
       return a.inTrial ? "free trial" : "trial ended";
     };
