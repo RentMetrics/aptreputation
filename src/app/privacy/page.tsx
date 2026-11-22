@@ -167,7 +167,6 @@ export default function PrivacyPage() {
         <h2>Contact</h2>
         <p>
           {LEGAL.company}<br />
-          {LEGAL.address}<br />
           <a href={`mailto:${LEGAL.email}`}>{LEGAL.email}</a>
         </p>
         <p>See also our <Link href="/terms">Terms of Service</Link>.</p>

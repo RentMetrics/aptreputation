@@ -2,7 +2,6 @@ import { action, internalAction, internalMutation, internalQuery } from "./_gene
 import { internal } from "./_generated/api";
 import { ConvexError, v } from "convex/values";
 
-const ADDRESS = "AptReputation, 30 E Broadway, Suite 203 #1053, Salt Lake City, UT 84111";
 
 function esc(s: string) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -38,7 +37,7 @@ function layout(heading: string, body: string, footer: string) {
 <p style="font-size:14px;font-weight:700;color:#1554c0;margin:0 0 16px">AptReputation</p>
 <h1 style="font-size:20px;line-height:1.3;margin:0 0 16px">${heading}</h1>
 ${body}
-<p style="font-size:12px;line-height:1.5;color:#5b6b7f;border-top:1px solid #dbe3ec;margin:28px 0 0;padding-top:14px">${footer}<br>${ADDRESS}</p>
+<p style="font-size:12px;line-height:1.5;color:#5b6b7f;border-top:1px solid #dbe3ec;margin:28px 0 0;padding-top:14px">${footer}</p>
 </div>`;
 }
 

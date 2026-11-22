@@ -165,7 +165,6 @@ export default function TermsPage() {
         <h2>Contact</h2>
         <p>
           {LEGAL.company}<br />
-          {LEGAL.address}<br />
           <a href={`mailto:${LEGAL.email}`}>{LEGAL.email}</a>
         </p>
       </section>

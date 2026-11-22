@@ -82,7 +82,7 @@ export default function ScorePage() {
       <header className="border-b border-line print:hidden">
         <div className="max-w-5xl mx-auto px-5 h-16 flex items-center justify-between">
           <Link href="/" aria-label="AptReputation home">
-            <Image src="/apt-reputation-logo-full-md.png" alt="APT Reputation" width={160} height={42} className="h-9 w-auto" priority />
+            <Image src="/aptreputation-logo-md.png" alt="AptReputation" width={398} height={120} className="h-11 w-auto" priority />
           </Link>
           <nav className="flex items-center gap-1 sm:gap-2" aria-label="Site">
             <Link href="/" className="hidden sm:block px-3 py-2 text-sm font-medium text-muted hover:text-ink">How AptReputation works</Link>
@@ -144,7 +144,7 @@ export default function ScorePage() {
                   </div>
                   <div className="rounded-2xl border border-line p-6 sm:p-8 grid gap-5 print:border-0 print:p-0">
                     <div className="hidden print:flex items-end justify-between border-b border-line pb-3">
-                      <Image src="/apt-reputation-logo-full-md.png" alt="AptReputation" width={160} height={42} className="h-9 w-auto" />
+                      <Image src="/aptreputation-logo-md.png" alt="AptReputation" width={398} height={120} className="h-9 w-auto" />
                       <p className="text-sm text-slate-600">
                         AptRep Score report · {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
                       </p>
@@ -162,7 +162,6 @@ export default function ScorePage() {
                       </p>
                       <p className="mt-2 text-xs text-slate-500">
                         See this score live at aptrep.com/{reportSlug(query || audit.name)}. The AptRep Score is counted from the property&apos;s public Google listing.
-                        Apartment Reputation, 30 E Broadway, Suite 203 #1053, Salt Lake City, UT 84111.
                       </p>
                     </div>
                   </div>

@@ -109,7 +109,7 @@ export default function Home() {
 
       <header className="bg-white border-b border-line">
         <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
-          <Image src="/apt-reputation-logo-full-md.png" alt="APT Reputation" width={160} height={42} className="h-9 w-auto" priority />
+          <Image src="/aptreputation-logo-md.png" alt="AptReputation" width={398} height={120} className="h-11 w-auto" priority />
           <nav className="flex items-center gap-1 sm:gap-2" aria-label="Site">
             <a href="#how" className="hidden sm:block px-3 py-2 text-sm font-medium text-muted hover:text-ink">How it works</a>
             <a href="#pricing" className="hidden sm:block px-3 py-2 text-sm font-medium text-muted hover:text-ink">Pricing</a>

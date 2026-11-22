@@ -35,25 +35,13 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      {
-        url: "/apt-reputation-logo-full-sm.png",
-        sizes: "32x32",
-        type: "image/png",
-      },
-      {
-        url: "/apt-reputation-logo-full-md.png",
-        sizes: "192x192",
-        type: "image/png",
-      },
+      { url: "/aptreputation-icon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/aptreputation-icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/aptreputation-icon-512.png", sizes: "512x512", type: "image/png" },
     ],
-    apple: [
-      {
-        url: "/apt-reputation-logo-full-lg.png",
-        sizes: "180x180",
-        type: "image/png",
-      },
-    ],
+    apple: [{ url: "/aptreputation-apple-touch.png", sizes: "180x180", type: "image/png" }],
   },
+
 };
 
 export default function RootLayout({

@@ -99,7 +99,7 @@ export default function StaffProfilePage() {
 
         <footer className="px-8 py-5 border-t border-slate-200 flex items-center justify-between gap-4 text-sm text-slate-500">
           <div className="flex items-center gap-2">
-            <Image src="/apt-reputation-logo-full-sm.png" alt="APT Reputation" width={110} height={29} className="h-6 w-auto" />
+            <Image src="/aptreputation-logo-md.png" alt="AptReputation" width={398} height={120} className="h-6 w-auto" />
             <span>Quotes are public Google reviews confirmed by {p.communityName}.</span>
           </div>
           <button onClick={() => window.print()} className="print:hidden inline-flex items-center gap-1.5 font-medium text-slate-700 hover:text-slate-900">

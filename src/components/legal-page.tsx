@@ -8,7 +8,7 @@ export function LegalPage({ title, children }: { title: string; children: React.
       <header className="border-b border-slate-200">
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/">
-            <Image src="/apt-reputation-logo-full-md.png" alt="APT Reputation" width={160} height={42} className="h-9 w-auto" />
+            <Image src="/aptreputation-logo-md.png" alt="AptReputation" width={398} height={120} className="h-11 w-auto" />
           </Link>
           <nav className="flex gap-4 text-sm text-slate-600" aria-label="Legal">
             <Link href="/privacy" className="hover:text-slate-900">Privacy</Link>
@@ -24,7 +24,7 @@ export function LegalPage({ title, children }: { title: string; children: React.
         </div>
       </main>
       <footer className="border-t border-slate-200 px-4 py-8 text-sm text-slate-500 text-center">
-        {LEGAL.company} · {LEGAL.address}
+        {LEGAL.company} · {LEGAL.email}
       </footer>
     </div>
   )
