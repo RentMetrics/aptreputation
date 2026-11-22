@@ -116,6 +116,8 @@ export default defineSchema({
     userId: v.optional(v.id("users")),
     role: memberRole,
     notify: notifyPref,
+    // The person who manages the property's Google Business Profile and is asked to connect it.
+    accountManager: v.optional(v.boolean()),
     invitedBy: v.id("users"),
     createdAt: v.number(),
   })

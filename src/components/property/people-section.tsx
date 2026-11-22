@@ -21,6 +21,8 @@ export function PeopleSection({ communityId }: { communityId: Id<"communities"> 
   const invite = useMutation(api.members.invite)
   const update = useMutation(api.members.update)
   const remove = useMutation(api.members.remove)
+  const setAccountManager = useMutation(api.members.setAccountManager)
+  const [asManager, setAsManager] = useState(false)
   const sendTest = useAction(api.notify.sendTest)
 
   const [email, setEmail] = useState("")
@@ -61,6 +63,7 @@ export function PeopleSection({ communityId }: { communityId: Id<"communities"> 
             <div className="flex-1 min-w-48">
               <p className="font-medium">
                 {p.name}{p.isYou ? " (you)" : ""}
+                {p.accountManager && <span className="ml-2 text-xs font-medium text-blue-900 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5">Account manager</span>}
                 {p.pending && <span className="ml-2 text-xs font-medium text-amber-900 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">Invited, not signed up yet</span>}
               </p>
               <p className="text-sm text-slate-600">{p.email}</p>
@@ -91,6 +94,20 @@ export function PeopleSection({ communityId }: { communityId: Id<"communities"> 
               <option value="none">No emails</option>
             </select>
             {data.canManage && p.memberId && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  guard(
+                    () => setAccountManager({ communityId, memberId: p.memberId!, on: true }),
+                    data.googleConnected ? `${p.name} is now the account manager.` : `${p.name} is the account manager. We emailed them the steps to connect Google.`,
+                  )
+                }
+              >
+                {p.accountManager ? (data.googleConnected ? "Account manager" : "Send connect steps again") : "Make account manager"}
+              </Button>
+            )}
+            {data.canManage && p.memberId && (
               <Button size="sm" variant="ghost" aria-label={`Remove ${p.name}`} onClick={() => confirm(`Remove ${p.name} from this property?`) && guard(() => remove({ communityId, memberId: p.memberId! }))}>
                 <X className="h-4 w-4" />
               </Button>
@@ -105,9 +122,10 @@ export function PeopleSection({ communityId }: { communityId: Id<"communities"> 
           onSubmit={(e) => {
             e.preventDefault()
             void guard(async () => {
-              await invite({ communityId, email, role })
+              await invite({ communityId, email, role, accountManager: asManager })
               setEmail("")
-            }, "Added. They get access as soon as they sign in with that email.")
+              setAsManager(false)
+            }, asManager ? "Added as account manager. We emailed them the steps to connect Google." : "Added. They get access as soon as they sign in with that email.")
           }}
         >
           <div className="flex-1 min-w-56">
@@ -123,9 +141,16 @@ export function PeopleSection({ communityId }: { communityId: Id<"communities"> 
             </select>
           </div>
           <Button type="submit"><UserPlus className="h-4 w-4 mr-1.5" />Add</Button>
+          <label className="basis-full flex items-start gap-2 text-sm text-slate-700">
+            <input id="invite-account-manager" type="checkbox" className="mt-0.5 h-4 w-4" checked={asManager} onChange={(e) => setAsManager(e.target.checked)} />
+            <span>
+              <span className="font-medium">Make them the account manager.</span> Choose this for the person who manages the property&apos;s Google Business Profile. They are added as a manager and emailed the steps to connect it.
+            </span>
+          </label>
         </form>
       )}
       <p className="text-xs text-slate-500 mt-3">
+        The account manager is the person who looks after the property&apos;s Google profile; they connect it once and everyone else works through that connection.
         Team members reply to reviews and manage cards and staff profiles. Managers can also add people, connect
         Google, and remove the property. Viewers can read everything and get alerts but cannot reply or change
         anything. Billing stays with the owner.

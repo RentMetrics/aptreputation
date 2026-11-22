@@ -1,4 +1,5 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, type MutationCtx } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { ConvexError, v } from "convex/values";
 import { canManage as isManager, requireCommunity, requireManager } from "./lib/auth";
@@ -18,6 +19,7 @@ export const list = query({
         email: owner.email,
         role: "owner" as "owner" | "manager" | "responder" | "viewer",
         notify: community.ownerNotify ?? ("all" as const),
+        accountManager: false,
         pending: false,
         isYou: owner._id === user._id,
       },
@@ -31,19 +33,20 @@ export const list = query({
             email: m.email,
             role: m.role as "owner" | "manager" | "responder" | "viewer",
             notify: m.notify,
+            accountManager: !!m.accountManager,
             pending: !m.userId,
             isYou: m.userId === user._id,
           };
         }),
       )),
     ];
-    return { people, canManage: isManager(role), emailReady: !!process.env.RESEND_API_KEY };
+    return { people, canManage: isManager(role), emailReady: !!process.env.RESEND_API_KEY, googleConnected: !!community.gbpLocation };
   },
 });
 
 export const invite = mutation({
-  args: { communityId: v.id("communities"), email: v.string(), role: memberRole },
-  handler: async (ctx, { communityId, email, role }) => {
+  args: { communityId: v.id("communities"), email: v.string(), role: memberRole, accountManager: v.optional(v.boolean()) },
+  handler: async (ctx, { communityId, email, role, accountManager }) => {
     const { user, community, owner } = await requireManager(ctx, communityId);
     const clean = email.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(clean)) throw new ConvexError("Enter a valid email address.");
@@ -58,7 +61,9 @@ export const invite = mutation({
       communityId,
       email: clean,
       userId: match?._id,
-      role,
+      // Connecting Google needs the manager role.
+      role: accountManager ? "manager" : role,
+      accountManager: accountManager || undefined,
       notify: "all",
       invitedBy: user._id,
       createdAt: Date.now(),
@@ -68,6 +73,43 @@ export const invite = mutation({
       communityName: community.name,
       inviterName: user.name,
       hasAccount: !!match,
+      accountManager: !!accountManager && !community.gbpLocation,
+      communityId,
+    });
+    if (accountManager) await handConnectTask(ctx, communityId, clean);
+  },
+});
+
+/** The account manager is shown as handling the "Connect the Google Business Profile" task on the fix plan. */
+async function handConnectTask(ctx: MutationCtx, communityId: Id<"communities">, email: string) {
+  const rows = await ctx.db.query("fixTasks").withIndex("by_community", (q) => q.eq("communityId", communityId)).collect();
+  const row = rows.find((r) => r.key === "connect-google");
+  if (row) await ctx.db.patch(row._id, { assignee: email });
+  else await ctx.db.insert("fixTasks", { communityId, key: "connect-google", status: "open", assignee: email, createdAt: Date.now() });
+}
+
+/**
+ * Names someone already on the property as its account manager, or takes that
+ * away. Naming them makes them a manager and emails them the steps to connect
+ * the Google Business Profile; "resend" sends those steps again.
+ */
+export const setAccountManager = mutation({
+  args: { communityId: v.id("communities"), memberId: v.id("members"), on: v.boolean() },
+  handler: async (ctx, { communityId, memberId, on }) => {
+    const { user, community } = await requireManager(ctx, communityId);
+    const member = await ctx.db.get(memberId);
+    if (!member || member.communityId !== communityId) throw new ConvexError("Person not found.");
+    await ctx.db.patch(memberId, on ? { accountManager: true, role: "manager" } : { accountManager: undefined });
+    if (!on) return;
+    await handConnectTask(ctx, communityId, member.email);
+    if (community.gbpLocation) return;
+    await ctx.scheduler.runAfter(0, internal.notify.sendInvite, {
+      email: member.email,
+      communityName: community.name,
+      inviterName: user.name,
+      hasAccount: !!member.userId,
+      accountManager: true,
+      communityId,
     });
   },
 });

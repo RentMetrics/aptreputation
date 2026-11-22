@@ -172,9 +172,40 @@ ${button(`${appUrl()}/dashboard/property/${data.communityId}`, "Open the fix pla
 // ---- invitations and test ---------------------------------------------------
 
 export const sendInvite = internalAction({
-  args: { email: v.string(), communityName: v.string(), inviterName: v.string(), hasAccount: v.boolean() },
-  handler: async (_ctx, { email, communityName, inviterName, hasAccount }): Promise<null> => {
-    const link = `${appUrl()}/${hasAccount ? "dashboard" : "sign-up"}`;
+  args: {
+    email: v.string(),
+    communityName: v.string(),
+    inviterName: v.string(),
+    hasAccount: v.boolean(),
+    // True when this person is asked to connect the property's Google Business Profile.
+    accountManager: v.optional(v.boolean()),
+    communityId: v.optional(v.id("communities")),
+  },
+  handler: async (_ctx, { email, communityName, inviterName, hasAccount, accountManager, communityId }): Promise<null> => {
+    const link = `${appUrl()}/${hasAccount ? (communityId ? `dashboard/property/${communityId}` : "dashboard") : "sign-up"}`;
+    if (accountManager) {
+      const li = (t: string) => `<li style="margin:0 0 8px">${t}</li>`;
+      const html = layout(
+        `${esc(inviterName)} asked you to connect ${esc(communityName)}'s Google profile`,
+        `<p style="font-size:15px;line-height:1.5;margin:0 0 12px">${esc(inviterName)} uses AptReputation to keep up with ${esc(communityName)}'s Google reviews and how the property shows up in AI search, and named you as its account manager because you manage its Google Business Profile.</p>
+<p style="font-size:15px;line-height:1.5;margin:0 0 8px">Connecting takes about two minutes, once:</p>
+<ol style="font-size:15px;line-height:1.5;margin:0 0 4px;padding-left:20px">
+${li(hasAccount ? "Open the property with the button below." : `Create your login with this email address (${esc(email)}). ${esc(communityName)} will be waiting for you.`)}
+${li("Open the property's <strong>Settings</strong> tab and choose <strong>Connect Google</strong>.")}
+${li("Sign in with the Google account that is an owner or manager of the property's Business Profile, and approve the request.")}
+${li(`Choose <strong>${esc(communityName)}</strong> from the list of locations.`)}
+</ol>
+${button(link, hasAccount ? "Open the property" : "Create your login")}
+<p style="font-size:14px;line-height:1.5;margin:0">After that, every review loads in full and the team can reply from one place. AptReputation posts a reply or changes the listing only when someone on the team chooses to. You can disconnect at any time in Settings.</p>`,
+        `Sent because ${esc(inviterName)} named this address as the account manager for ${esc(communityName)}.`,
+      );
+      try {
+        await send(email, `Please connect ${communityName}'s Google profile to AptReputation`, html);
+      } catch (e) {
+        console.error("Account manager email failed", e);
+      }
+      return null;
+    }
     const html = layout(
       `${esc(inviterName)} added you to ${esc(communityName)}`,
       `<p style="font-size:15px;line-height:1.5;margin:0">You can now read and reply to ${esc(communityName)}'s Google reviews, see what residents are saying, and manage review cards in AptReputation.</p>
