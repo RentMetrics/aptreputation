@@ -122,6 +122,8 @@ export const add = action({
     await ctx.scheduler.runAfter(0, internal.billing.syncQuantity, { userId: user._id });
     // The AI search check runs straight away for a new property, within the account's allowance.
     await ctx.runMutation(internal.visibility.firstCheck, { communityId });
+    // Locks in the starting AptRep Score.
+    await ctx.scheduler.runAfter(0, internal.audit.scoreProperty, { communityId });
     return communityId;
   },
 });

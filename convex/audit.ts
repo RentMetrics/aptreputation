@@ -1,4 +1,4 @@
-import { action, internalMutation, internalQuery, mutation } from "./_generated/server";
+import { action, internalAction, internalMutation, internalQuery, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { ConvexError, v } from "convex/values";
 import { nearbyCommunities, placeDetails, searchPlaces, type NearbyCommunity } from "./lib/google";
@@ -254,5 +254,63 @@ export const saveLead = mutation({
       throw new ConvexError("Enter a valid email address.");
     }
     await ctx.db.insert("leads", { ...args, email, propertyName: args.propertyName.slice(0, 200), createdAt: Date.now() });
+  },
+});
+
+// ---- AptRep Score for a customer's property ----------------------------------
+
+/** Scores a signed-up property from its Google listing and saves it. The first score is its starting point. */
+export const scoreProperty = internalAction({
+  args: { communityId: v.id("communities") },
+  handler: async (ctx, { communityId }): Promise<number | null> => {
+    const community = await ctx.runQuery(internal.communities.byId, { communityId });
+    if (!community) return null;
+    const place = await placeDetails(community.googlePlaceId);
+    let nearby: NearbyCommunity[] = [];
+    if (place.location && place.rating) {
+      try {
+        nearby = await nearbyCommunities(place.location, place.placeId, MARKET_RADIUS_MILES);
+      } catch (e) {
+        console.warn("Nearby search failed", e);
+      }
+    }
+    const { score } = scoreOf(place.rating, place.totalReviews ?? 0, place.reviews, nearby);
+    if (score === null) return null;
+    await ctx.runMutation(internal.audit.saveScore, { communityId, score });
+    return score;
+  },
+});
+
+export const saveScore = internalMutation({
+  args: { communityId: v.id("communities"), score: v.number() },
+  handler: async (ctx, { communityId, score }) => {
+    const community = await ctx.db.get(communityId);
+    if (!community) return;
+    const now = Date.now();
+    await ctx.db.patch(communityId, {
+      aptScore: score,
+      aptScoreAt: now,
+      // Locked the first time; never overwritten.
+      ...(community.baselineScore === undefined ? { baselineScore: score, baselineScoreAt: now } : {}),
+    });
+    await ctx.db.insert("scoreSnapshots", { communityId, score, at: now });
+  },
+});
+
+const SCORE_EVERY_DAYS = 7;
+
+/** Daily: refreshes the AptRep Score of properties not scored in the last week. */
+export const refreshScores = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    let n = 0;
+    for (const c of await ctx.db.query("communities").collect()) {
+      if (n >= 40) break;
+      if (c.aptScoreAt && now - c.aptScoreAt < SCORE_EVERY_DAYS * DAY) continue;
+      await ctx.scheduler.runAfter(n * 3000, internal.audit.scoreProperty, { communityId: c._id });
+      n++;
+    }
+    return n;
   },
 });

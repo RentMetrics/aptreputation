@@ -150,6 +150,10 @@ export const checkSummary = internalAction({
       esc(subject),
       `<p style="font-size:15px;line-height:1.5;margin:0 0 12px">We asked AI assistants the questions renters ask about apartments near ${esc(data.name)}. ${
         before ? `Last time it was named in ${before.shown} of ${before.outOf}.` : "This is the first check, so it is your starting point."
+      }${
+        before && data.sinceJoining && data.sinceJoining.then.outOf > 0
+          ? ` When it joined AptReputation it was named in ${data.sinceJoining.then.shown} of ${data.sinceJoining.then.outOf}; by the same assistants it is now ${data.sinceJoining.now.shown} of ${data.sinceJoining.now.outOf}.`
+          : ""
       }</p>
 <table style="border-collapse:collapse;margin:0 0 12px">${rows}</table>
 <p style="font-size:15px;line-height:1.5;margin:0">${

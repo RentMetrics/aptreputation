@@ -85,6 +85,20 @@ export default function PropertyPage() {
           </p>
           <p className="text-muted">Started at {community.baselineRating?.toFixed(1) ?? "–"}</p>
         </div>
+        {community.aptScore !== undefined && (
+          <div className="text-sm border-l border-line pl-6">
+            <p className="text-muted">AptRep Score</p>
+            <p className="font-display text-3xl font-extrabold tabular-nums leading-tight">{community.aptScore}</p>
+            {community.baselineScore !== undefined && (() => {
+              const change = community.aptScore - community.baselineScore
+              return (
+                <p className={`tabular-nums ${change > 0 ? "text-gain font-semibold" : change < 0 ? "text-loss font-semibold" : "text-muted"}`}>
+                  {change === 0 ? "No change" : `${change > 0 ? "+" : ""}${change}`} since joining, started at {community.baselineScore}
+                </p>
+              )
+            })()}
+          </div>
+        )}
       </div>
 
       <div className="border-b border-slate-200 mb-6 flex gap-1 overflow-x-auto" role="tablist" aria-label="Property sections">

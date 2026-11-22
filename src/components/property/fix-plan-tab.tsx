@@ -389,6 +389,11 @@ export function FixPlanTab({ communityId, onOpenTab }: { communityId: Id<"commun
             <button type="button" className="text-left" onClick={() => onOpenTab("ai")}>
               <p className="text-2xl font-semibold tabular-nums">{plan.shown.shown} of {plan.shown.outOf}</p>
               <p className="text-sm text-brand underline">AI searches named this property</p>
+              {plan.sinceJoining && (
+                <p className={`text-sm ${plan.sinceJoining.now.shown > plan.sinceJoining.then.shown ? "text-gain" : plan.sinceJoining.now.shown < plan.sinceJoining.then.shown ? "text-loss" : "text-slate-600"}`}>
+                  Started at {plan.sinceJoining.then.shown} of {plan.sinceJoining.then.outOf}
+                </p>
+              )}
             </button>
           )}
         </div>

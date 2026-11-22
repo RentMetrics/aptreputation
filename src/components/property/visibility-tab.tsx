@@ -124,6 +124,24 @@ export function VisibilityTab({ communityId }: { communityId: Id<"communities"> 
             ))}
           </div>
         )}
+        {result && data.sinceJoining && (() => {
+          const s = data.sinceJoining
+          const change = s.now.shown - s.then.shown
+          return (
+            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+              <p>
+                <span className="font-semibold">Since joining ({formatDate(s.at)}):</span>{" "}
+                started at {s.then.shown} of {s.then.outOf}, now {s.now.shown} of {s.now.outOf}{" "}
+                <span className={change > 0 ? "text-gain font-semibold" : change < 0 ? "text-loss font-semibold" : "text-slate-600"}>
+                  ({change === 0 ? "no change" : `${change > 0 ? "+" : ""}${change}`})
+                </span>
+              </p>
+              <p className="text-slate-600 mt-1">
+                {s.assistants.map((a) => `${a.label} ${a.then} → ${a.now}`).join(" · ")}
+              </p>
+            </div>
+          )
+        })()}
         {result && previous && data.previous && (
           <p className="text-sm text-slate-600 mt-3">
             Previous check ({formatDate(data.previous.at)}): {previous.shown} of {previous.outOf}

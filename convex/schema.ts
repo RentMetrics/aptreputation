@@ -80,6 +80,18 @@ export default defineSchema({
     totalReviews: v.optional(v.number()),
     baselineRating: v.optional(v.number()),
     baselineReviews: v.optional(v.number()),
+    // AptRep Score: locked at sign-up, then refreshed weekly.
+    baselineScore: v.optional(v.number()),
+    baselineScoreAt: v.optional(v.number()),
+    aptScore: v.optional(v.number()),
+    aptScoreAt: v.optional(v.number()),
+    // AI search starting point: each assistant's count from the first check it answered. Never overwritten.
+    aiBaseline: v.optional(
+      v.object({
+        at: v.number(),
+        assistants: v.array(v.object({ key: v.string(), label: v.string(), shown: v.number(), outOf: v.number(), at: v.number() })),
+      }),
+    ),
     // Google Business Profile location, e.g. "accounts/123/locations/456"
     gbpLocation: v.optional(v.string()),
     gbpLocationTitle: v.optional(v.string()),
@@ -239,6 +251,13 @@ export default defineSchema({
       why: v.string(),
     })),
   }).index("by_community", ["communityId", "generatedAt"]),
+
+  // A property's AptRep Score over time, from sign-up on.
+  scoreSnapshots: defineTable({
+    communityId: v.id("communities"),
+    score: v.number(),
+    at: v.number(),
+  }).index("by_community_at", ["communityId", "at"]),
 
   ratingSnapshots: defineTable({
     communityId: v.id("communities"),

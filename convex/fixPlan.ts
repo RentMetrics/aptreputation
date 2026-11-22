@@ -4,6 +4,7 @@ import { Doc, Id } from "./_generated/dataModel";
 import { requireCommunity, requireResponder } from "./lib/auth";
 import { factSheetText, factsComplete, tasksFor, titleOf, type Facts } from "./lib/fixPlan";
 import type { VisibilityResult } from "./lib/visibility";
+import { aiSinceJoining } from "./visibility";
 
 const DAY = 24 * 60 * 60 * 1000;
 export const CHECK_EVERY_DAYS = 30;
@@ -85,6 +86,7 @@ export const get = query({
       lastCheckAt: check?.at ?? null,
       nextCheckAt: check ? check.at + CHECK_EVERY_DAYS * DAY : null,
       shown: check ? { shown: check.result.shown, outOf: check.result.outOf } : null,
+      sinceJoining: check ? aiSinceJoining(community.aiBaseline, check.result.assistants) : null,
     };
   },
 });

@@ -62,7 +62,7 @@ async function allowance(ctx: QueryCtx | MutationCtx, user: Doc<"users">, owner:
 export const latest = query({
   args: { communityId: v.id("communities") },
   handler: async (ctx, { communityId }) => {
-    const { user, owner } = await requireCommunity(ctx, communityId);
+    const { user, owner, community } = await requireCommunity(ctx, communityId);
     const rows = await ctx.db
       .query("visibilityScans")
       .withIndex("by_community", (q) => q.eq("communityId", communityId))
@@ -77,6 +77,10 @@ export const latest = query({
       current: done[0] ? { at: done[0].finishedAt ?? done[0].startedAt, result: done[0].result ?? null } : null,
       previous: done[1] ? { at: done[1].finishedAt ?? done[1].startedAt, result: done[1].result ?? null } : null,
       allowance: await allowance(ctx, user, owner, communityId),
+      sinceJoining: (() => {
+        const now = done[0] ? parseV2(done[0].result) : null;
+        return now ? aiSinceJoining(community.aiBaseline, now.assistants) : null;
+      })(),
     };
   },
 });
@@ -116,6 +120,7 @@ export const finish = internalMutation({
     // Visitors who asked for this report get it by email, or a note that it did not finish.
     if (scan?.notifyEmails?.length) await ctx.scheduler.runAfter(0, internal.notify.aiReportReady, { scanId });
     if (!scan || !result || !scan.communityId) return;
+    await recordAiBaseline(ctx, scan.communityId, JSON.parse(result) as VisibilityResult, scan.finishedAt ?? Date.now());
     // The check opens and clears tasks on the property's fix plan.
     await syncAfterCheck(ctx, scan.communityId, JSON.parse(result) as VisibilityResult);
     if (scan.auto) await ctx.scheduler.runAfter(0, internal.notify.checkSummary, { scanId });
@@ -197,7 +202,9 @@ export const summaryContext = internalQuery({
       ...members.filter((m) => m.role === "manager" && m.notify !== "none").map((m) => m.email),
     ].filter(Boolean);
     const open = (await ctx.db.query("fixTasks").withIndex("by_community", (q) => q.eq("communityId", community._id)).collect()).filter((t) => t.status === "open").length;
-    return { communityId: community._id, name: community.name, result: scan.result, previous, recipients: [...new Set(recipients)], open };
+    const current = parseV2(scan.result);
+    const sinceJoining = current ? aiSinceJoining(community.aiBaseline, current.assistants) : null;
+    return { communityId: community._id, name: community.name, result: scan.result, previous, recipients: [...new Set(recipients)], open, sinceJoining, joined: community.createdAt };
   },
 });
 
@@ -433,4 +440,61 @@ export async function reportState(ctx: QueryCtx | MutationCtx, placeId: string) 
   if (rows[0]?.status === "running" && now - rows[0].startedAt < STALE_AFTER) return { state: "running" as const, ai: null };
   if (done) return { state: "done" as const, ai: summaryOf(parseV2(done.result)!, done.finishedAt ?? done.startedAt) };
   return { state: "failed" as const, ai: null, error: rows[0]?.error ?? "The report did not finish." };
+}
+
+// ---- the starting point ------------------------------------------------------
+
+/**
+ * Locks in each assistant's count the first time it answers for a property.
+ * Later checks never change it, so progress is always measured from sign-up.
+ */
+async function recordAiBaseline(ctx: MutationCtx, communityId: Id<"communities">, result: VisibilityResult, at: number) {
+  const community = await ctx.db.get(communityId);
+  if (!community) return;
+  const have = community.aiBaseline?.assistants ?? [];
+  const add = result.assistants.filter((a) => a.outOf > 0 && !have.some((h) => h.key === a.key)).map((a) => ({ key: a.key, label: a.label, shown: a.shown, outOf: a.outOf, at }));
+  if (add.length === 0) return;
+  await ctx.db.patch(communityId, { aiBaseline: { at: community.aiBaseline?.at ?? at, assistants: [...have, ...add] } });
+}
+
+/** One-time: sets starting points for properties added before they were recorded, from their earliest saved check. */
+export const backfillBaselines = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    let ai = 0;
+    let scores = 0;
+    for (const c of await ctx.db.query("communities").collect()) {
+      if (!c.aiBaseline) {
+        const rows = await ctx.db.query("visibilityScans").withIndex("by_community", (q) => q.eq("communityId", c._id)).order("asc").collect();
+        for (const r of rows) {
+          const result = r.status === "done" ? parseV2(r.result) : null;
+          if (result) await recordAiBaseline(ctx, c._id, result, r.finishedAt ?? r.startedAt);
+        }
+        if ((await ctx.db.get(c._id))?.aiBaseline) ai++;
+      }
+      if (c.baselineScore === undefined) {
+        await ctx.scheduler.runAfter(scores * 3000, internal.audit.scoreProperty, { communityId: c._id });
+        scores++;
+      }
+    }
+    return { ai, scores };
+  },
+});
+
+/** Change since joining for the AI count, over the assistants measured both then and now. */
+export function aiSinceJoining(
+  baseline: { at: number; assistants: { key: string; label: string; shown: number; outOf: number }[] } | undefined,
+  now: { key: string; shown: number; outOf: number }[],
+) {
+  if (!baseline) return null;
+  const pairs = now
+    .map((a) => ({ now: a, then: baseline.assistants.find((b) => b.key === a.key) }))
+    .filter((p): p is { now: (typeof now)[number]; then: NonNullable<(typeof baseline.assistants)[number]> } => !!p.then);
+  if (pairs.length === 0) return null;
+  return {
+    at: baseline.at,
+    then: { shown: pairs.reduce((s, p) => s + p.then.shown, 0), outOf: pairs.reduce((s, p) => s + p.then.outOf, 0) },
+    now: { shown: pairs.reduce((s, p) => s + p.now.shown, 0), outOf: pairs.reduce((s, p) => s + p.now.outOf, 0) },
+    assistants: pairs.map((p) => ({ key: p.now.key, label: p.then.label, then: p.then.shown, thenOutOf: p.then.outOf, now: p.now.shown, nowOutOf: p.now.outOf })),
+  };
 }
