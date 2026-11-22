@@ -5,6 +5,7 @@ import { Doc, Id } from "./_generated/dataModel";
 import { accessState, requireAdmin, requireCommunity, requireResponder } from "./lib/auth";
 import { CHECK_EVERY_DAYS, syncAfterCheck } from "./fixPlan";
 import { summaryOf, type AiSummary, type VisibilityResult } from "./lib/visibility";
+import { activityFor, outcomesFor } from "./results";
 
 const MINUTE = 60 * 1000;
 const DAY = 24 * 60 * MINUTE;
@@ -204,7 +205,18 @@ export const summaryContext = internalQuery({
     const open = (await ctx.db.query("fixTasks").withIndex("by_community", (q) => q.eq("communityId", community._id)).collect()).filter((t) => t.status === "open").length;
     const current = parseV2(scan.result);
     const sinceJoining = current ? aiSinceJoining(community.aiBaseline, current.assistants) : null;
-    return { communityId: community._id, name: community.name, result: scan.result, previous, recipients: [...new Set(recipients)], open, sinceJoining, joined: community.createdAt };
+    return {
+      communityId: community._id,
+      name: community.name,
+      result: scan.result,
+      previous,
+      recipients: [...new Set(recipients)],
+      open,
+      sinceJoining,
+      joined: community.createdAt,
+      month: await activityFor(ctx, community, Math.max(community.createdAt, Date.now() - 30 * DAY)),
+      outcomes: await outcomesFor(ctx, community),
+    };
   },
 });
 

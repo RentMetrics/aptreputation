@@ -142,24 +142,37 @@ export const checkSummary = internalAction({
     const now = counts(data.result);
     if (!now) return null;
     const before = counts(data.previous);
-    const subject = `${data.name}: named in ${now.shown} of ${now.outOf} AI searches this month`;
-    const rows = now.assistants
-      .map((a) => `<tr><td style="padding:6px 16px 6px 0;font-size:15px">${esc(a.label)}</td><td style="padding:6px 0;font-size:15px;font-weight:600">${a.shown} of ${a.outOf}</td></tr>`)
-      .join("");
+    const m = data.month;
+    const o = data.outcomes;
+    const subject = `${data.name}: your monthly AptReputation results`;
+    const line = (label: string, value: string) =>
+      `<tr><td style="padding:6px 16px 6px 0;font-size:15px;border-bottom:1px solid #e2e8f0">${label}</td><td align="right" style="padding:6px 0;font-size:15px;font-weight:600;border-bottom:1px solid #e2e8f0;white-space:nowrap">${value}</td></tr>`;
+    const change = (start: number | null, end: number | null, digits = 0) =>
+      start === null || end === null ? "–" : `${start.toFixed(digits)} → ${end.toFixed(digits)}${end > start ? " ▲" : end < start ? " ▼" : ""}`;
+    const table = (rows: string) => `<table style="border-collapse:collapse;width:100%;margin:0 0 16px">${rows}</table>`;
     const html = layout(
       esc(subject),
-      `<p style="font-size:15px;line-height:1.5;margin:0 0 12px">We asked AI assistants the questions renters ask about apartments near ${esc(data.name)}. ${
-        before ? `Last time it was named in ${before.shown} of ${before.outOf}.` : "This is the first check, so it is your starting point."
-      }${
-        before && data.sinceJoining && data.sinceJoining.then.outOf > 0
-          ? ` When it joined AptReputation it was named in ${data.sinceJoining.then.shown} of ${data.sinceJoining.then.outOf}; by the same assistants it is now ${data.sinceJoining.now.shown} of ${data.sinceJoining.now.outOf}.`
-          : ""
-      }</p>
-<table style="border-collapse:collapse;margin:0 0 12px">${rows}</table>
+      `<p style="font-size:15px;line-height:1.5;margin:0 0 8px"><strong>How renters see ${esc(data.name)}, against the day it joined</strong></p>
+${table(
+  line("AptRep Score", change(o.score.start, o.score.now)) +
+    line("Named in AI search", o.ai ? `${o.ai.then.shown} → ${o.ai.now.shown} of ${o.ai.now.outOf}${o.ai.now.shown > o.ai.then.shown ? " ▲" : o.ai.now.shown < o.ai.then.shown ? " ▼" : ""}` : `${now.shown} of ${now.outOf}`) +
+    line("Google rating", change(o.rating.start, o.rating.now, 1)) +
+    line("Google reviews", change(o.reviews.start, o.reviews.now)),
+)}
+<p style="font-size:15px;line-height:1.5;margin:0 0 8px"><strong>This month's AI search check</strong>: named in ${now.shown} of ${now.outOf} renter searches${before ? ` (last month ${before.shown} of ${before.outOf})` : ""}.</p>
+${table(now.assistants.map((a) => line(esc(a.label), `${a.shown} of ${a.outOf}`)).join(""))}
+<p style="font-size:15px;line-height:1.5;margin:0 0 8px"><strong>What AptReputation did in the last 30 days</strong></p>
+${table(
+  line("New Google reviews", `${m.newReviews} (${m.positive} rated 4 or 5 stars)`) +
+    line("Replies posted", String(m.repliesPosted)) +
+    line("Review card taps and scans", String(m.cardTaps)) +
+    line("Reviews posted after a card tap", String(m.reviewsAfterTap)) +
+    line("Fixes confirmed cleared", String(m.fixesCleared)),
+)}
 <p style="font-size:15px;line-height:1.5;margin:0">${
         data.open > 0 ? `${data.open} fix${data.open === 1 ? " is" : "es are"} open on the plan, each with the steps to take.` : "Nothing new to fix came out of this check."
-      } Answers vary from one run to the next, so judge the trend over a few months.</p>
-${button(`${appUrl()}/dashboard/property/${data.communityId}`, "Open the fix plan")}`,
+      } AI answers vary from one run to the next, so judge the trend over a few months.</p>
+${button(`${appUrl()}/dashboard/property/${data.communityId}`, "See the full results")}`,
       `You get this monthly summary because you own or manage ${esc(data.name)}. Change or turn off alerts in the property's Settings tab.`,
     );
     for (const to of data.recipients) {

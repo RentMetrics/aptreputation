@@ -22,7 +22,7 @@ import { formatDate } from "@/lib/format"
 const TABS = [
   { key: "reviews", label: "Reviews" },
   { key: "plan", label: "Fix plan" },
-  { key: "progress", label: "Progress" },
+  { key: "progress", label: "Results" },
   { key: "insights", label: "Insights" },
   { key: "ai", label: "AI search" },
   { key: "requests", label: "Get reviews" },

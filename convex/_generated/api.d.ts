@@ -30,6 +30,7 @@ import type * as members from "../members.js";
 import type * as notify from "../notify.js";
 import type * as outreach from "../outreach.js";
 import type * as prospects from "../prospects.js";
+import type * as results from "../results.js";
 import type * as reviews from "../reviews.js";
 import type * as staff from "../staff.js";
 import type * as tags from "../tags.js";
@@ -66,6 +67,7 @@ declare const fullApi: ApiFromModules<{
   notify: typeof notify;
   outreach: typeof outreach;
   prospects: typeof prospects;
+  results: typeof results;
   reviews: typeof reviews;
   staff: typeof staff;
   tags: typeof tags;

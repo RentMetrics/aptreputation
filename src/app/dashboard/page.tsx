@@ -10,6 +10,7 @@ import { formatDate } from "@/lib/format"
 
 export default function PortfolioPage() {
   const properties = useQuery(api.communities.list)
+  const results = useQuery(api.results.portfolio)
 
   const rated = properties?.filter((p) => p.googleRating !== undefined) ?? []
   const average = rated.length ? rated.reduce((n, p) => n + (p.googleRating ?? 0), 0) / rated.length : null
@@ -56,6 +57,26 @@ export default function PortfolioPage() {
               </div>
             ))}
           </dl>
+
+          {results && (
+            <section className="bg-white border border-line rounded-2xl px-6 py-5 mb-6">
+              <p className="text-sm font-semibold">Since joining ({formatDate(results.since)}), across your properties</p>
+              <dl className="mt-3 grid grid-cols-2 lg:grid-cols-5 gap-x-8 gap-y-4">
+                {[
+                  { value: results.averageScoreChange === null ? "–" : `${results.averageScoreChange > 0 ? "+" : ""}${results.averageScoreChange}`, label: "average AptRep Score change" },
+                  { value: results.ai ? `${results.ai.then} → ${results.ai.now}` : "–", label: results.ai ? `AI search answers naming you, of ${results.ai.outOf}` : "AI search answers naming you" },
+                  { value: results.repliesPosted, label: "review replies posted" },
+                  { value: results.positive, label: "new 4 and 5 star reviews" },
+                  { value: results.fixesCleared, label: "fixes confirmed cleared" },
+                ].map((s) => (
+                  <div key={s.label}>
+                    <dd className="font-display text-3xl font-extrabold tabular-nums leading-none">{s.value}</dd>
+                    <dt className="text-sm text-muted mt-1.5">{s.label}</dt>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
 
           <ul className="bg-white border border-line rounded-2xl divide-y divide-line overflow-hidden">
             {properties.map((p) => {

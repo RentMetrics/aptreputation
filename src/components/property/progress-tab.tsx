@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api"
 import { Id } from "@/convex/_generated/dataModel"
 import { PositiveBars, RatingLine } from "@/components/charts"
 import { formatDate } from "@/lib/format"
+import { ResultsPanel } from "@/components/property/results-panel"
 
 function signed(n: number, digits = 0) {
   return `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toFixed(digits)}`
@@ -49,6 +50,8 @@ export function ProgressTab({ communityId }: { communityId: Id<"communities"> })
           </div>
         </div>
       </section>
+
+      <ResultsPanel communityId={communityId} />
 
       {!p.fullHistory && (
         <p className="bg-amber-50 border border-amber-200 text-amber-950 rounded-xl px-4 py-3 text-sm">
