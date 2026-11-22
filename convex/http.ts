@@ -1,6 +1,7 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { api, internal } from "./_generated/api";
+import { handleSnapshotRequest } from "./lib/businessSignal";
 
 const http = httpRouter();
 
@@ -97,6 +98,19 @@ http.route({
     }
     return new Response("ok");
   }),
+});
+
+// AI Marketing Hub reads AptReputation's totals here (signed by the hub; totals only).
+http.route({
+  path: "/business-signal/snapshot",
+  method: "GET",
+  handler: httpAction(async (ctx, request) =>
+    handleSnapshotRequest(request, {
+      business: "aptreputation",
+      secret: process.env.BUSINESS_SIGNAL_SECRET,
+      collect: () => ctx.runAction(internal.businessSignal.collect, {}),
+    }),
+  ),
 });
 
 export default http;

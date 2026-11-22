@@ -213,6 +213,14 @@ export const revenue = action({
   handler: async (ctx): Promise<RevenueReport> => {
     const me = await ctx.runQuery(internal.users.current, {});
     if (me.role !== "admin") throw new ConvexError("Admins only.");
+    return await ctx.runAction(internal.billing.revenueReport, {});
+  },
+});
+
+/** The revenue report itself, for the admin page and the AI Marketing Hub totals. */
+export const revenueReport = internalAction({
+  args: {},
+  handler: async (ctx): Promise<RevenueReport> => {
     const accounts = await ctx.runQuery(internal.billing.revenueAccounts, {});
 
     type Sub = {
