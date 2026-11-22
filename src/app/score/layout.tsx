@@ -10,8 +10,8 @@ export const metadata: Metadata = {
   description,
   alternates: { canonical: "/score" },
   // A child's openGraph replaces the root one, so the share image is repeated here.
-  openGraph: { type: "website", url: "/score", siteName: "AptReputation", title, description, images: ["/aptreputation-og.png"] },
-  twitter: { card: "summary_large_image", title, description, images: ["/aptreputation-og.png"] },
+  openGraph: { type: "website", url: "/score", siteName: "AptReputation", title, description, images: ["/aptreputation-share.png"] },
+  twitter: { card: "summary_large_image", title, description, images: ["/aptreputation-share.png"] },
 }
 
 export default function ScoreLayout({ children }: { children: ReactNode }) {

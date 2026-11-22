@@ -25,13 +25,13 @@ export const metadata: Metadata = {
     siteName: "AptReputation",
     title: "Raise your community's Google rating. Then prove it.",
     description: "Check any apartment community's Google reviews free, then answer every review and earn more of them.",
-    images: [{ url: "/aptreputation-og.png", width: 1200, height: 630, alt: "AptReputation: raise your community's Google rating" }],
+    images: [{ url: "/aptreputation-share.png", width: 1200, height: 630, alt: "AptReputation: raise your community's Google rating" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Raise your community's Google rating. Then prove it.",
     description: "Check any apartment community's Google reviews free, then answer every review and earn more of them.",
-    images: ["/aptreputation-og.png"],
+    images: ["/aptreputation-share.png"],
   },
   icons: {
     icon: [
