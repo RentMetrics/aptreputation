@@ -65,6 +65,8 @@ export type VisibilityResult = {
   assistants: AssistantTotal[];
   market: { city: string; state: string; zip: string } | null;
   google: { name: string; address: string; rating: number | null; totalReviews: number; phone: string | null; website: string | null };
+  /** The leasing phone on the property's fact sheet, when its team has filled one in. The phone check compares with this. */
+  factPhone?: string | null;
   prompts: PromptResult[];
   /** Across every assistant: searches by need that named this property, out of those answered. */
   shown: number;
@@ -199,12 +201,26 @@ export function fixesFor(r: Omit<VisibilityResult, "fixes">): Fix[] {
       why: `This property was named in ${r.shown} of ${r.outOf} searches by need (${each}) and has ${rated}. Assistants lean on star ratings and recent reviews when they pick a short list.`,
     });
   }
-  const wrongPhone = byName.filter((a) => a.statedPhone && g.phone && !samePhone(a.statedPhone, g.phone));
-  if (wrongPhone.length) {
+  // The phone check. Google's number is often a tracking number, so it is never the reference:
+  // the fact sheet is, when the team has filled it in; otherwise the check flags only
+  // assistants that disagree with each other.
+  const stated = byName.filter((a) => a.statedPhone && a.statedPhone.replace(/\D/g, "").length >= 10);
+  const distinct: string[] = [];
+  for (const a of stated) if (!distinct.some((d) => samePhone(d, a.statedPhone))) distinct.push(a.statedPhone!);
+  if (r.factPhone && r.factPhone.replace(/\D/g, "").length >= 10) {
+    const wrong = stated.filter((a) => !samePhone(a.statedPhone, r.factPhone));
+    if (wrong.length) {
+      fixes.push({
+        priority: "now",
+        key: "phone", title: "Make the leasing phone number the same everywhere",
+        why: `Asked about the property by name, ${list(wrong.map((a) => `${labelOf(a.assistant)} gave ${a.statedPhone}`))}. The fact sheet says ${r.factPhone}. Listing sites often assign their own numbers, and assistants repeat them.`,
+      });
+    }
+  } else if (distinct.length >= 2) {
     fixes.push({
       priority: "now",
       key: "phone", title: "Make the leasing phone number the same everywhere",
-      why: `Asked about the property by name, ${list(wrongPhone.map((a) => `${labelOf(a.assistant)} gave ${a.statedPhone}`))}. Google shows ${g.phone}. Listing sites often assign their own numbers, and assistants repeat them.`,
+      why: `Asked about the property by name, the assistants gave ${distinct.length} different phone numbers: ${list(stated.map((a) => `${labelOf(a.assistant)} ${a.statedPhone}`))}. A renter who asks may get a number that does not reach the leasing office. Listing sites often assign their own numbers, and assistants repeat them.`,
     });
   }
   const otherNames = [...new Set(r.prompts.flatMap((p) => p.answers.map((a) => a.namedAs)).filter((n): n is string => !!n))];

@@ -100,6 +100,7 @@ export default function ScorePage() {
             </h1>
             <p className="mt-5 text-lg text-white/85 leading-relaxed max-w-2xl">
               Enter an apartment community. In a few seconds you&apos;ll see its score out of 100, how it is made up, and where it stands against the communities around it.
+              Then see what ChatGPT, Gemini and Claude tell renters about it.
             </p>
             <form
               onSubmit={(e) => {

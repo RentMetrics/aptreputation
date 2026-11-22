@@ -225,7 +225,10 @@ export function VisibilityTab({ communityId }: { communityId: Id<"communities"> 
                     <tr className="border-b align-top">
                       <td className="py-2 pr-4">Phone</td>
                       {named.map((a) => <td key={a.assistant} className="py-2 pr-4 tabular-nums">{a.statedPhone ?? "Not given"}</td>)}
-                      <td className="py-2 tabular-nums">{result.google.phone ?? "None listed"}</td>
+                      <td className="py-2 tabular-nums">
+                        {result.google.phone ?? "None listed"}
+                        {result.factPhone && <span className="block text-slate-500">Fact sheet: {result.factPhone}</span>}
+                      </td>
                     </tr>
                     <tr className="border-b align-top">
                       <td className="py-2 pr-4">Rating</td>

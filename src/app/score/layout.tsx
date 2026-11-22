@@ -3,7 +3,7 @@ import type { ReactNode } from "react"
 
 const title = "AptRep Score: how does your apartment community rate?"
 const description =
-  "Enter any apartment community and see its AptRep Score out of 100, how it is made up, and where it stands against the communities around it. Free, no sign-up."
+  "Enter any apartment community and see its AptRep Score out of 100 and where it stands nearby, then get a report on what ChatGPT, Gemini and Claude tell renters about it. Free."
 
 export const metadata: Metadata = {
   title,

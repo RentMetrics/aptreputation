@@ -16,8 +16,8 @@ const body = Instrument_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "AptReputation (Apartment Reputation): Google review management for apartment communities",
-  description: "Reply to every Google review, earn more of them with tap cards, see what residents are saying, and track your rating from the day you join.",
+  title: "AptReputation (Apartment Reputation): AI search and Google reviews for apartment communities",
+  description: "See how ChatGPT, Gemini and Claude answer renters about your community, fix what they get wrong step by step, and earn more Google reviews.",
   metadataBase: new URL("https://www.aptreputation.com"),
   openGraph: {
     type: "website",

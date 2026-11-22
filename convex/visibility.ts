@@ -101,10 +101,10 @@ export const scanContext = internalQuery({
     if (!scan) return null;
     if (scan.communityId) {
       const c = await ctx.db.get(scan.communityId);
-      return c ? { name: c.name, address: c.address, placeId: c.googlePlaceId, rating: c.googleRating ?? null, totalReviews: c.totalReviews ?? 0 } : null;
+      return c ? { name: c.name, address: c.address, placeId: c.googlePlaceId, rating: c.googleRating ?? null, totalReviews: c.totalReviews ?? 0, factPhone: c.facts?.phone ?? null } : null;
     }
     if (!scan.placeId || !scan.target) return null;
-    return { name: scan.target.name, address: scan.target.address, placeId: scan.placeId, rating: scan.target.rating ?? null, totalReviews: scan.target.totalReviews ?? 0 };
+    return { name: scan.target.name, address: scan.target.address, placeId: scan.placeId, rating: scan.target.rating ?? null, totalReviews: scan.target.totalReviews ?? 0, factPhone: null };
   },
 });
 
@@ -265,5 +265,33 @@ export const publicSummary = internalQuery({
       if (result) return summaryOf(result, at);
     }
     return null;
+  },
+});
+
+/**
+ * Runs the first AI search check as soon as a property is added, so a new
+ * account sees it in minutes instead of waiting for the daily run. It counts as
+ * the property's monthly check, and as a trial's one check.
+ */
+export const firstCheck = internalMutation({
+  args: { communityId: v.id("communities") },
+  handler: async (ctx, { communityId }) => {
+    if (process.env.MONTHLY_CHECKS === "off") return null;
+    const community = await ctx.db.get(communityId);
+    if (!community) return null;
+    const owner = await ctx.db.get(community.ownerId);
+    if (!owner) return null;
+    const state = accessState(owner, Date.now());
+    if (!state.active) return null;
+    if ((await scansOf(ctx, communityId, 0)).length) return null;
+    const paying = owner.role === "admin" || state.free || state.subscribed;
+    if (!paying) {
+      const owned = await ctx.db.query("communities").withIndex("by_owner", (q) => q.eq("ownerId", owner._id)).collect();
+      for (const c of owned) if ((await scansOf(ctx, c._id, 0)).some(counts)) return null;
+    }
+    const scanId = await ctx.db.insert("visibilityScans", { communityId, startedBy: owner._id, startedAt: Date.now(), status: "running", auto: true });
+    // A minute's head start lets the review import finish first.
+    await ctx.scheduler.runAfter(60 * 1000, internal.visibilityScan.run, { scanId });
+    return scanId;
   },
 });

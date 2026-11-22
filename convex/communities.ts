@@ -120,6 +120,8 @@ export const add = action({
     });
     await ctx.scheduler.runAfter(0, internal.ai.analyzePending, { communityId });
     await ctx.scheduler.runAfter(0, internal.billing.syncQuantity, { userId: user._id });
+    // The AI search check runs straight away for a new property, within the account's allowance.
+    await ctx.runMutation(internal.visibility.firstCheck, { communityId });
     return communityId;
   },
 });

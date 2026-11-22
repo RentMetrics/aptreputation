@@ -5,6 +5,6 @@ export const LEGAL = {
   product: "AptReputation",
   site: "https://www.aptreputation.com",
   email: "contact@aptreputation.com",
-  effective: "November 11, 2026",
+  effective: "November 21, 2026",
   governingState: "Utah",
 }

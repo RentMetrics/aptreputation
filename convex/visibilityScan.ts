@@ -341,6 +341,7 @@ export const run = internalAction({
           phone: contact.phone ?? null,
           website: contact.website ?? null,
         },
+        factPhone: community.factPhone,
         prompts,
         shown: needAnswers.filter((a) => a.mentioned).length,
         outOf: needAnswers.length,

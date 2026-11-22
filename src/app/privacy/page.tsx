@@ -85,6 +85,13 @@ export default function PrivacyPage() {
           this content to train its models. AI output can be wrong; you decide what is posted.
         </p>
         <p>
+          The AI search check asks AI assistants from OpenAI (ChatGPT), Google (Gemini) and Anthropic (Claude) the
+          questions renters ask about apartments in a property&apos;s area, and asks about the property by name. For
+          this, the property&apos;s name, city, state and ZIP code are sent to those providers. No review text,
+          resident information or account details are sent to OpenAI or Google. When you ask us to email you a
+          report, we use your email address only to send it and to follow up about it.
+        </p>
+        <p>
           We may create de-identified and aggregated information from use of the service, for example benchmarks
           across many communities that do not identify any customer, property, resident or employee, and use it to
           improve our products and for research and analytics. This does not include information obtained through
@@ -111,8 +118,10 @@ export default function PrivacyPage() {
           <li>Vercel (website hosting)</li>
           <li>Clerk (sign-in and account security)</li>
           <li>Stripe (payments)</li>
-          <li>Anthropic (AI processing)</li>
-          <li>Google (Maps and Business Profile services)</li>
+          <li>Anthropic (AI processing, and Claude in the AI search check)</li>
+          <li>OpenAI (ChatGPT in the AI search check)</li>
+          <li>Google (Maps, Business Profile services, and Gemini in the AI search check)</li>
+          <li>Resend (email delivery)</li>
         </ul>
         <p>
           We may also disclose information if required by law, to protect our rights or users, or as part of a merger

@@ -28,7 +28,7 @@ function InactiveCardNotice() {
 const STEPS = [
   {
     title: "Mark your starting point",
-    body: "The day you add a property we record its Google rating and review count. Everything after is measured against that line.",
+    body: "The day you add a property we record its Google rating and review count, and ask the AI assistants about it. Everything after is measured against that line.",
   },
   {
     title: "Answer every review",
@@ -123,12 +123,13 @@ export default function Home() {
       <section className="bg-ink text-white">
         <div className="max-w-6xl mx-auto px-5 py-16 lg:py-24 grid gap-12 lg:grid-cols-[1.1fr_0.9fr] items-center">
           <div>
-            <h1 className="font-display font-extrabold text-[2.6rem] leading-[1.02] sm:text-6xl lg:text-[4.25rem] tracking-tight">
-              Raise your community&apos;s Google rating. Then prove it.
+            <p className="text-sm font-semibold uppercase tracking-wide text-star">AI search and Google reviews</p>
+            <h1 className="mt-3 font-display font-extrabold text-[2.4rem] leading-[1.04] sm:text-[3.4rem] lg:text-[3.6rem] tracking-tight">
+              Renters are asking ChatGPT where to live. What does it say about your property?
             </h1>
             <p className="text-lg sm:text-xl text-blue-200 mt-6 max-w-xl leading-relaxed">
-              AptReputation helps on-site teams earn more 4 and 5 star reviews, answer every one,
-              and shows owners exactly how far each property has come since day one.
+              AptReputation checks how ChatGPT, Gemini and Claude answer renters about your community, gives your team a
+              step-by-step plan to fix what they get wrong, and grows the Google reviews those assistants rely on.
             </p>
 
             <form onSubmit={search} className="mt-9 max-w-xl">
@@ -152,26 +153,23 @@ export default function Home() {
           </div>
 
           {/* An example of the product's own progress view, built from its real parts */}
-          <div className="relative" aria-label="Example: one community's first 90 days">
+          <div className="relative" aria-label="Example: an AI search check and a review reply">
             <div className="settle bg-white text-ink rounded-2xl p-6 shadow-2xl shadow-black/30">
-              <p className="text-sm font-medium text-muted">Example community, first 90 days</p>
-              <div className="flex items-end gap-4 mt-3">
+              <p className="text-sm font-medium text-muted">Example community: AI search check</p>
+              <div className="flex items-end justify-between gap-4 mt-3">
                 <div>
-                  <p className="text-sm text-muted">Joined at</p>
-                  <p className="font-display text-4xl font-bold text-slate-400 tabular-nums leading-none">4.1</p>
+                  <p className="font-display text-5xl font-extrabold tabular-nums leading-none">3 <span className="text-2xl font-semibold text-muted">of 12</span></p>
+                  <p className="text-sm text-muted mt-1">renter searches named it</p>
                 </div>
-                <svg viewBox="0 0 120 40" className="h-10 flex-1 mb-1" aria-hidden>
-                  <path d="M2 34 C 30 34, 40 22, 62 18 S 100 6, 118 5" fill="none" stroke="var(--brand)" strokeWidth="2.5" strokeLinecap="round" />
-                  <circle cx="118" cy="5" r="4.5" fill="var(--brand)" stroke="#fff" strokeWidth="2" />
-                </svg>
-                <div className="text-right">
-                  <p className="text-sm text-muted">Today</p>
-                  <p className="font-display text-6xl font-extrabold tabular-nums leading-none">4.4</p>
-                </div>
+                <ul className="text-sm tabular-nums text-right space-y-0.5">
+                  <li>ChatGPT <span className="font-semibold">1 of 4</span></li>
+                  <li>Gemini <span className="font-semibold">0 of 4</span></li>
+                  <li>Claude <span className="font-semibold">2 of 4</span></li>
+                </ul>
               </div>
-              <div className="flex items-center justify-between mt-4 pt-4 border-t border-line">
-                <Stars rating={4.4} size={20} />
-                <p className="text-sm font-semibold text-gain">+0.3 stars, +47 reviews</p>
+              <div className="mt-4 pt-4 border-t border-line text-sm space-y-1.5">
+                <p><span className="font-semibold">Fix now:</span> assistants give 3 different leasing numbers</p>
+                <p><span className="font-semibold">Fix now:</span> ChatGPT quotes a 1.0 rating from 3 reviews</p>
               </div>
             </div>
 
@@ -194,6 +192,35 @@ export default function Home() {
               Thank you, Danielle. A same-day AC repair is exactly what we aim for, and we&apos;ll make sure Carlos sees this…
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* The AI search check: what it asks, what it finds, what subscribers get */}
+      <section className="bg-white border-b border-line">
+        <div className="max-w-6xl mx-auto px-5 py-16">
+          <h2 className="font-display text-3xl sm:text-4xl font-bold max-w-3xl">The shortlist is now written by an AI assistant</h2>
+          <p className="mt-4 text-lg text-slate-700 leading-relaxed max-w-3xl">
+            A renter types &ldquo;pet friendly 2 bedroom near downtown under $2,000&rdquo; into ChatGPT and gets three or four
+            communities back, with a rating and a phone number for each. Apartments.com, Zillow and RentCafe now answer
+            renters inside ChatGPT. If your property isn&apos;t on that list, or the details are wrong, the renter never sees your listing.
+          </p>
+          <div className="mt-10 grid gap-8 md:grid-cols-3">
+            <div className="border-t-2 border-ink pt-5">
+              <h3 className="text-xl font-semibold">We ask what renters ask</h3>
+              <p className="mt-3 text-slate-700 leading-relaxed">ChatGPT, Gemini and Claude each get the questions renters ask in your market, and one about your property by name.</p>
+            </div>
+            <div className="border-t-2 border-ink pt-5">
+              <h3 className="text-xl font-semibold">We show what they get wrong</h3>
+              <p className="mt-3 text-slate-700 leading-relaxed">How often you are named, who is named instead, and the phone numbers, ratings and old names the assistants repeat.</p>
+            </div>
+            <div className="border-t-2 border-ink pt-5">
+              <h3 className="text-xl font-semibold">Your team fixes it, step by step</h3>
+              <p className="mt-3 text-slate-700 leading-relaxed">Each finding becomes a task with plain steps and a request written for you. A fresh check every month shows what changed.</p>
+            </div>
+          </div>
+          <a href="/score" className="mt-8 inline-block font-semibold text-brand underline underline-offset-4">
+            See how AI assistants describe your property
+          </a>
         </div>
       </section>
 
