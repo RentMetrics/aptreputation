@@ -9,11 +9,13 @@ import { CardsTab } from "@/components/admin/cards-tab"
 import { OutreachTab } from "@/components/admin/outreach-tab"
 import { ScoreEmailTab } from "@/components/admin/score-email-tab"
 import { BatchTab } from "@/components/admin/batch-tab"
+import { RevenueTab } from "@/components/admin/revenue-tab"
 import { ProspectsTab } from "@/components/admin/prospects-tab"
 import { AccountsTab, LeadsTab, PropertiesTab } from "@/components/admin/tracker-tabs"
 
 const TABS = [
   ["accounts", "Accounts"],
+  ["revenue", "Revenue"],
   ["properties", "Properties"],
   ["cards", "NFC cards"],
   ["prospects", "Marketing list"],
@@ -85,6 +87,7 @@ export default function AdminPage() {
         {tab === "outreach" && <OutreachTab />}
         {tab === "score" && <ScoreEmailTab />}
         {tab === "batch" && <BatchTab />}
+        {tab === "revenue" && <RevenueTab />}
         {tab === "leads" && overview && <LeadsTab leads={overview.leads} />}
       </div>
     </main>
