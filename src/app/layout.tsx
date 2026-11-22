@@ -23,15 +23,15 @@ export const metadata: Metadata = {
     type: "website",
     url: "https://www.aptreputation.com",
     siteName: "AptReputation",
-    title: "Raise your community's Google rating. Then prove it.",
-    description: "Check any apartment community's Google reviews free, then answer every review and earn more of them.",
-    images: [{ url: "/aptreputation-share.png", width: 1200, height: 630, alt: "AptReputation: raise your community's Google rating" }],
+    title: "Renters are asking ChatGPT where to live. What does it say about your property?",
+    description: "See how ChatGPT, Gemini and Claude answer renters about your apartment community. Free AI search report.",
+    images: [{ url: "/aptreputation-share-ai.png", width: 1200, height: 630, alt: "AptReputation: renters are asking ChatGPT where to live. What does it say about your property?" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Raise your community's Google rating. Then prove it.",
-    description: "Check any apartment community's Google reviews free, then answer every review and earn more of them.",
-    images: ["/aptreputation-share.png"],
+    title: "Renters are asking ChatGPT where to live. What does it say about your property?",
+    description: "See how ChatGPT, Gemini and Claude answer renters about your apartment community. Free AI search report.",
+    images: ["/aptreputation-share-ai.png"],
   },
   icons: {
     icon: [
