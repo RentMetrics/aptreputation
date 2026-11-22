@@ -154,7 +154,10 @@ export default function ScorePage() {
                       <h2 className="font-display text-2xl sm:text-3xl font-bold">{audit.name}</h2>
                       <p className="mt-1 text-slate-600">{audit.address}</p>
                     </div>
-                    <AuditResultBody audit={audit} />
+                    <AuditResultBody
+                      audit={audit}
+                      onAiReady={() => void runAudit({ query: query || audit.name }).then((fresh) => fresh && setAudit(fresh)).catch(() => undefined)}
+                    />
                     <div className="hidden print:block border-t border-line pt-3 text-sm text-slate-700">
                       <p className="font-semibold text-ink">Raise this score with AptReputation.</p>
                       <p className="mt-1">

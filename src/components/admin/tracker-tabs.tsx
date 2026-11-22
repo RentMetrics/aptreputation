@@ -145,13 +145,17 @@ export function PropertiesTab({ properties }: { properties: Overview["properties
 export function LeadsTab({ leads }: { leads: Overview["leads"] }) {
   return (
     <section className="bg-white border border-slate-200 rounded-xl p-5 overflow-x-auto">
-      {leads.length === 0 && <p className="text-slate-600 text-sm">No leads yet. They appear when a visitor asks for their audit by email.</p>}
+      {leads.length === 0 && <p className="text-slate-600 text-sm">No leads yet. They appear when a visitor asks for their audit or AI search report by email.</p>}
       <table className="w-full text-sm">
         <tbody>
           {leads.map((l) => (
             <tr key={l._id} className="border-b last:border-0">
               <td className="py-2"><a className="text-blue-700 underline" href={`mailto:${l.email}`}>{l.email}</a></td>
-              <td className="py-2">{l.propertyName}<div className="text-xs text-slate-500">{l.address}</div></td>
+              <td className="py-2">
+                {l.propertyName}
+                {l.aiReport && <span className="ml-2 text-xs font-medium text-blue-900 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5">AI report</span>}
+                <div className="text-xs text-slate-500">{l.address}</div>
+              </td>
               <td className="py-2 tabular-nums">{l.rating?.toFixed(1) ?? "–"} stars, {l.totalReviews ?? 0} reviews, score {l.score ?? "–"}</td>
               <td className="py-2 text-slate-500">{formatDate(l.createdAt)}</td>
             </tr>

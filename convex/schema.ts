@@ -262,6 +262,8 @@ export default defineSchema({
     rating: v.optional(v.number()),
     totalReviews: v.optional(v.number()),
     score: v.optional(v.number()),
+    // True when the visitor asked for the AI search report.
+    aiReport: v.optional(v.boolean()),
     createdAt: v.number(),
   }).index("by_created", ["createdAt"]),
 
@@ -385,7 +387,10 @@ export default defineSchema({
     // The Google listing checked. Always set for admin reports; they are found by it.
     placeId: v.optional(v.string()),
     target: v.optional(v.object({ name: v.string(), address: v.string(), rating: v.optional(v.number()), totalReviews: v.optional(v.number()) })),
-    startedBy: v.id("users"),
+    // Who started it. Absent when a visitor asked for a report from the score page.
+    startedBy: v.optional(v.id("users")),
+    // Visitors who asked for this report by email; each is sent it when it finishes.
+    notifyEmails: v.optional(v.array(v.string())),
     startedAt: v.number(),
     status: v.union(v.literal("running"), v.literal("done"), v.literal("failed")),
     // True for the monthly check AptReputation starts itself; those send a summary email.

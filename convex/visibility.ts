@@ -113,6 +113,8 @@ export const finish = internalMutation({
   handler: async (ctx, { scanId, result, error }) => {
     await ctx.db.patch(scanId, { status: result ? "done" : "failed", finishedAt: Date.now(), result, error });
     const scan = await ctx.db.get(scanId);
+    // Visitors who asked for this report get it by email, or a note that it did not finish.
+    if (scan?.notifyEmails?.length) await ctx.scheduler.runAfter(0, internal.notify.aiReportReady, { scanId });
     if (!scan || !result || !scan.communityId) return;
     // The check opens and clears tasks on the property's fix plan.
     await syncAfterCheck(ctx, scan.communityId, JSON.parse(result) as VisibilityResult);
@@ -293,5 +295,110 @@ export const firstCheck = internalMutation({
     // A minute's head start lets the review import finish first.
     await ctx.scheduler.runAfter(60 * 1000, internal.visibilityScan.run, { scanId });
     return scanId;
+  },
+});
+
+// ---- reports visitors ask for -------------------------------------------------
+
+/** Free AI search reports a day across all visitors, to bound what they cost. */
+const PUBLIC_REPORTS_PER_DAY = () => Math.max(0, Number(process.env.AI_REPORTS_PER_DAY ?? 20) || 0);
+const PER_EMAIL_PER_DAY = 2;
+
+/**
+ * A visitor on the score page asks for the AI search report for a property they
+ * just scored. The property must have been scored on the public page, so its
+ * name and address come from that result, not from the browser.
+ */
+export const requestReport = mutation({
+  args: { placeId: v.string(), email: v.string() },
+  handler: async (ctx, { placeId, email }) => {
+    const clean = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(clean) || clean.length > 200) throw new ConvexError("Enter a valid email address.");
+    const cached = await ctx.db.query("auditCache").withIndex("by_place", (q) => q.eq("placeId", placeId)).unique();
+    if (!cached) throw new ConvexError("Check the property's score first, then ask for its AI search report.");
+    const audit = JSON.parse(cached.result) as { name: string; address: string; rating: number | null; totalReviews: number; score: number | null };
+    const now = Date.now();
+
+    const recent = await ctx.db.query("leads").withIndex("by_created", (q) => q.gte("createdAt", now - DAY)).collect();
+    if (recent.filter((l) => l.aiReport && l.email === clean).length >= PER_EMAIL_PER_DAY) {
+      throw new ConvexError("You've asked for two reports today. Please try again tomorrow.");
+    }
+    await ctx.db.insert("leads", {
+      email: clean,
+      propertyName: audit.name.slice(0, 200),
+      address: audit.address,
+      placeId,
+      rating: audit.rating ?? undefined,
+      totalReviews: audit.totalReviews,
+      score: audit.score ?? undefined,
+      aiReport: true,
+      createdAt: now,
+    });
+
+    const rows = await reportRows(ctx, placeId);
+    // A recent report is reused: the visitor gets it by email straight away.
+    const fresh = rows.find((r) => r.status === "done" && now - (r.finishedAt ?? r.startedAt) < REPORT_FRESH_DAYS * DAY && parseV2(r.result));
+    if (fresh) {
+      await ctx.db.patch(fresh._id, { notifyEmails: [...new Set([...(fresh.notifyEmails ?? []), clean])] });
+      await ctx.scheduler.runAfter(0, internal.notify.aiReportReady, { scanId: fresh._id, only: clean });
+      return { state: "ready" as const };
+    }
+    const running = rows.find((r) => r.status === "running" && now - r.startedAt < STALE_AFTER);
+    if (running) {
+      await ctx.db.patch(running._id, { notifyEmails: [...new Set([...(running.notifyEmails ?? []), clean])] });
+      return { state: "running" as const };
+    }
+
+    const key = `aireport:${new Date(now).toISOString().slice(0, 10)}`;
+    const usage = await ctx.db.query("usage").withIndex("by_key", (q) => q.eq("key", key)).unique();
+    if ((usage?.count ?? 0) >= PUBLIC_REPORTS_PER_DAY()) {
+      throw new ConvexError("Today's free AI search reports have all been used. We've noted your request; please try again tomorrow.");
+    }
+    if (usage) await ctx.db.patch(usage._id, { count: usage.count + 1 });
+    else await ctx.db.insert("usage", { key, count: 1 });
+
+    const scanId = await ctx.db.insert("visibilityScans", {
+      placeId,
+      target: { name: audit.name.slice(0, 200), address: audit.address.slice(0, 300), rating: audit.rating ?? undefined, totalReviews: audit.totalReviews },
+      notifyEmails: [clean],
+      startedAt: now,
+      status: "running",
+    });
+    await ctx.scheduler.runAfter(0, internal.visibilityScan.run, { scanId });
+    return { state: "started" as const };
+  },
+});
+
+/** Public: whether a report for this listing is running or ready, so the score page can show it when it lands. */
+export const publicReportStatus = query({
+  args: { placeId: v.string() },
+  handler: async (ctx, { placeId }) => {
+    const rows = await reportRows(ctx, placeId);
+    const now = Date.now();
+    const done = rows.find((r) => r.status === "done" && now - (r.finishedAt ?? r.startedAt) < REPORT_FRESH_DAYS * DAY);
+    return {
+      running: rows.some((r) => r.status === "running" && now - r.startedAt < STALE_AFTER),
+      doneAt: done ? done.finishedAt ?? done.startedAt : null,
+      failed: rows[0]?.status === "failed",
+    };
+  },
+});
+
+/** What the report email needs. */
+export const reportEmailContext = internalQuery({
+  args: { scanId: v.id("visibilityScans") },
+  handler: async (ctx, { scanId }) => {
+    const scan = await ctx.db.get(scanId);
+    if (!scan || scan.communityId || !scan.target) return null;
+    const result = scan.status === "done" ? parseV2(scan.result) : null;
+    return {
+      name: scan.target.name,
+      address: scan.target.address,
+      rating: scan.target.rating ?? null,
+      totalReviews: scan.target.totalReviews ?? 0,
+      status: scan.status,
+      summary: result ? summaryOf(result, scan.finishedAt ?? scan.startedAt) : null,
+      recipients: scan.notifyEmails ?? [],
+    };
   },
 });

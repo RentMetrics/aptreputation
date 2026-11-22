@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
-import { useMutation } from "convex/react"
+import { useMutation, useQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -121,12 +121,66 @@ function AiSearch({ ai, name }: { ai: AiSummary; name: string }) {
   )
 }
 
+/** Lets a visitor ask for the AI search report by email, and shows it on the page when it lands. */
+function AiReportRequest({ audit, onReady }: { audit: Audit; onReady?: () => void }) {
+  const request = useMutation(api.visibility.requestReport)
+  const [email, setEmail] = useState("")
+  const [state, setState] = useState<"idle" | "saving" | "started" | "running" | "ready">("idle")
+  const [error, setError] = useState<string | null>(null)
+  const status = useQuery(api.visibility.publicReportStatus, state === "started" || state === "running" ? { placeId: audit.placeId } : "skip")
+  const fired = useRef(false)
+  useEffect(() => {
+    if (status?.doneAt && !fired.current) {
+      fired.current = true
+      setState("ready")
+      onReady?.()
+    }
+  }, [status?.doneAt, onReady])
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setState("saving")
+    try {
+      const out = await request({ placeId: audit.placeId, email })
+      setState(out.state)
+      if (out.state === "ready") onReady?.()
+    } catch (err) {
+      setError(errorMessage(err))
+      setState("idle")
+    }
+  }
+
+  return (
+    <div className="rounded-xl border-2 border-brand/30 bg-blue-50/50 p-4 sm:p-5 print:hidden">
+      <p className="font-semibold">What do ChatGPT, Gemini and Claude tell renters about {audit.name}?</p>
+      <p className="text-sm text-slate-700 mt-1">
+        We&apos;ll ask each of them the questions renters ask about apartments nearby, and about {audit.name} by name, then email you what they said: how often it&apos;s named, who is named instead, and what they get wrong. Free, about two minutes.
+      </p>
+      {state === "idle" || state === "saving" ? (
+        <form onSubmit={submit} className="mt-3 flex flex-col sm:flex-row gap-2">
+          <label htmlFor="ai-report-email" className="sr-only">Your email</label>
+          <Input id="ai-report-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" className="bg-white sm:flex-1" />
+          <Button type="submit" disabled={state === "saving"}>{state === "saving" ? "Starting…" : "Email me the AI search report"}</Button>
+        </form>
+      ) : state === "ready" ? (
+        <p className="text-sm text-emerald-800 mt-3" role="status">Your report is ready{onReady ? " and showing on this page" : ""}. We&apos;ve also emailed it to {email}.</p>
+      ) : (
+        <p className="text-sm text-slate-800 mt-3" role="status">
+          Asking the assistants now. It takes about two minutes; we&apos;ll email it to {email}{onReady ? " and show it here when it lands" : ""}.
+        </p>
+      )}
+      {error && <p className="text-sm text-red-700 mt-2" role="alert">{error}</p>}
+    </div>
+  )
+}
+
 /**
  * The body of a free check result: rating, AptRep Score and its parts, standing
  * nearby, what to do next, and the follow-up form. Used in the landing page's
  * dialog and on the /score page. The caller renders the property name above it.
  */
-export function AuditResultBody({ audit, signUpHref = "/sign-up" }: { audit: Audit; signUpHref?: string }) {
+export function AuditResultBody({ audit, signUpHref = "/sign-up", onAiReady }: { audit: Audit; signUpHref?: string; onAiReady?: () => void }) {
   const saveLead = useMutation(api.audit.saveLead)
   const [email, setEmail] = useState("")
   const [leadState, setLeadState] = useState<"idle" | "saving" | "saved">("idle")
@@ -230,7 +284,7 @@ export function AuditResultBody({ audit, signUpHref = "/sign-up" }: { audit: Aud
           </ol>
         </div>
       )}
-      {audit.ai && <AiSearch ai={audit.ai} name={audit.name} />}
+      {audit.ai ? <AiSearch ai={audit.ai} name={audit.name} /> : audit.rating !== null && <AiReportRequest audit={audit} onReady={onAiReady} />}
       {audit.nextStep && (
         <div className="rounded-xl border border-line bg-slate-50 p-4">
           <p className="font-semibold text-sm mb-1">What would raise it most</p>

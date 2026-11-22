@@ -449,7 +449,10 @@ export default function Home() {
                 <DialogTitle>{audit.name}</DialogTitle>
                 <DialogDescription>{audit.address}</DialogDescription>
               </DialogHeader>
-              <AuditResultBody audit={audit} />
+              <AuditResultBody
+                audit={audit}
+                onAiReady={() => void runAudit({ query }).then((fresh) => fresh && setAudit(fresh)).catch(() => undefined)}
+              />
             </>
           )}
         </DialogContent>

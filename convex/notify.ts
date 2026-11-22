@@ -1,6 +1,7 @@
 import { action, internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { ConvexError, v } from "convex/values";
+import { promoLine } from "./lib/promo";
 
 
 function esc(s: string) {
@@ -162,6 +163,51 @@ ${button(`${appUrl()}/dashboard/property/${data.communityId}`, "Open the fix pla
         await send(to, subject, html);
       } catch (e) {
         console.error("Monthly check email failed for one recipient", e);
+      }
+    }
+    return null;
+  },
+});
+
+// ---- AI search report a visitor asked for ------------------------------------
+
+/** Emails the AI search report to the visitors who asked for it (or one of them, when it was already done). */
+export const aiReportReady = internalAction({
+  args: { scanId: v.id("visibilityScans"), only: v.optional(v.string()) },
+  handler: async (ctx, { scanId, only }): Promise<null> => {
+    const data = await ctx.runQuery(internal.visibility.reportEmailContext, { scanId });
+    if (!data || !emailConfigured()) return null;
+    const to = only ? [only] : data.recipients;
+    if (to.length === 0) return null;
+    const m = data.address.match(/,\s*([^,]+),\s*([A-Z]{2})\s+\d{5}/);
+    const q = [data.name, m?.[1], m?.[2]].filter(Boolean).join(" ");
+    const link = `${appUrl()}/score?q=${encodeURIComponent(q)}`;
+    const s = data.summary;
+    let subject: string;
+    let body: string;
+    if (!s) {
+      subject = `We couldn't finish the AI search report for ${data.name}`;
+      body = `<p style="font-size:15px;line-height:1.5;margin:0 0 12px">The AI assistants didn't answer when we ran the report for ${esc(data.name)}. This usually clears within the hour. Open the property's score page and ask again.</p>${button(link, "Open the score page")}`;
+    } else {
+      subject = `${data.name}: named in ${s.shown} of ${s.outOf} AI searches`;
+      const row = (a: string, b: string) => `<tr><td style="padding:6px 16px 6px 0;font-size:15px">${a}</td><td style="padding:6px 0;font-size:15px;font-weight:600">${b}</td></tr>`;
+      const labels: Record<string, string> = { chatgpt: "ChatGPT", gemini: "Gemini", claude: "Claude" };
+      const quotes = s.byName.filter((b) => b.statedRating).map((b) => `${esc(labels[b.assistant] ?? b.assistant)} quoted ${esc(b.statedRating!)}.`);
+      body = `<p style="font-size:15px;line-height:1.5;margin:0 0 12px">You asked how AI assistants answer renters about ${esc(data.name)}. We asked ${esc(s.assistants.map((a) => a.label).join(", "))} the questions renters ask about apartments nearby. They named ${esc(data.name)} in <strong>${s.shown} of ${s.outOf}</strong> answers.</p>
+<table style="border-collapse:collapse;margin:0 0 12px">${s.assistants.map((a) => row(esc(a.label), `${a.shown} of ${a.outOf}`)).join("")}</table>
+${quotes.length ? `<p style="font-size:15px;line-height:1.5;margin:0 0 12px">Asked about it by name: ${quotes.join(" ")}</p>` : ""}
+${s.competitors.length ? `<p style="font-size:15px;line-height:1.5;margin:0 0 12px">Named most often instead: ${esc(s.competitors.slice(0, 4).map((c) => c.name).join(", "))}.</p>` : ""}
+${s.findings.length ? `<p style="font-size:15px;line-height:1.5;margin:0 0 4px"><strong>What is holding it back</strong></p><ul style="font-size:15px;line-height:1.5;margin:0 0 12px;padding-left:20px">${s.findings.slice(0, 4).map((f) => `<li>${esc(f.title)}</li>`).join("")}</ul>` : ""}
+${button(link, "See the full report")}
+<p style="font-size:14px;line-height:1.5;margin:0 0 12px">AptReputation turns each of these into a step-by-step task for your team, writes the requests to listing sites and web vendors for you, and checks again every month. The first 14 days are free: ${esc(appUrl().replace(/^https?:\/\//, ""))}.${promoLine(Date.now()) ? ` ${esc(promoLine(Date.now())!)}` : ""}</p>
+<p style="font-size:13px;line-height:1.5;color:#5b6b7f;margin:0">Each question was asked once per assistant, and their answers vary from day to day, so read this as a sample.</p>`;
+    }
+    const html = layout(esc(subject), body, `Sent because this address asked for the AI search report for ${esc(data.name)} on aptreputation.com.`);
+    for (const email of to) {
+      try {
+        await send(email, subject, html);
+      } catch (e) {
+        console.error("AI report email failed for one recipient", e);
       }
     }
     return null;
