@@ -11,6 +11,7 @@
 import type * as admin from "../admin.js";
 import type * as ai from "../ai.js";
 import type * as audit from "../audit.js";
+import type * as batch from "../batch.js";
 import type * as billing from "../billing.js";
 import type * as communities from "../communities.js";
 import type * as crons from "../crons.js";
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   ai: typeof ai;
   audit: typeof audit;
+  batch: typeof batch;
   billing: typeof billing;
   communities: typeof communities;
   crons: typeof crons;

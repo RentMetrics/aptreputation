@@ -402,3 +402,35 @@ export const reportEmailContext = internalQuery({
     };
   },
 });
+
+/** For the admin batch: start the AI search report for a listing, or reuse one from the last 45 days. */
+export const startOrReuseReport = internalMutation({
+  args: { placeId: v.string(), name: v.string(), address: v.string(), rating: v.optional(v.number()), totalReviews: v.optional(v.number()), startedBy: v.id("users") },
+  handler: async (ctx, { placeId, name, address, rating, totalReviews, startedBy }) => {
+    const now = Date.now();
+    const rows = await reportRows(ctx, placeId);
+    const reuse = rows.find(
+      (r) => (r.status === "running" && now - r.startedAt < STALE_AFTER) || (r.status === "done" && now - (r.finishedAt ?? r.startedAt) < REPORT_FRESH_DAYS * DAY && parseV2(r.result)),
+    );
+    if (reuse) return { scanId: reuse._id, reused: true };
+    const scanId = await ctx.db.insert("visibilityScans", {
+      placeId,
+      target: { name: name.slice(0, 200), address: address.slice(0, 300), rating, totalReviews },
+      startedBy,
+      startedAt: now,
+      status: "running",
+    });
+    await ctx.scheduler.runAfter(0, internal.visibilityScan.run, { scanId });
+    return { scanId, reused: false };
+  },
+});
+
+/** For the admin batch: where a listing's report stands, with its summary when done. */
+export async function reportState(ctx: QueryCtx | MutationCtx, placeId: string) {
+  const rows = await reportRows(ctx, placeId);
+  const now = Date.now();
+  const done = rows.find((r) => r.status === "done" && parseV2(r.result));
+  if (rows[0]?.status === "running" && now - rows[0].startedAt < STALE_AFTER) return { state: "running" as const, ai: null };
+  if (done) return { state: "done" as const, ai: summaryOf(parseV2(done.result)!, done.finishedAt ?? done.startedAt) };
+  return { state: "failed" as const, ai: null, error: rows[0]?.error ?? "The report did not finish." };
+}

@@ -417,6 +417,18 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_community", ["communityId"]),
 
+  // Admin batch of prospect reports: one row per property pasted in.
+  reportBatch: defineTable({
+    createdBy: v.id("users"),
+    query: v.string(),
+    firstName: v.optional(v.string()),
+    email: v.optional(v.string()),
+    status: v.union(v.literal("queued"), v.literal("scoring"), v.literal("started"), v.literal("blocked"), v.literal("notfound"), v.literal("failed")),
+    placeId: v.optional(v.string()),
+    note: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_created", ["createdAt"]),
+
   usage: defineTable({
     key: v.string(), // e.g. "audit:2026-11-10"
     count: v.number(),

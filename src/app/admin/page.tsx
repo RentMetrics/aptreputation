@@ -8,6 +8,7 @@ import { api } from "@/convex/_generated/api"
 import { CardsTab } from "@/components/admin/cards-tab"
 import { OutreachTab } from "@/components/admin/outreach-tab"
 import { ScoreEmailTab } from "@/components/admin/score-email-tab"
+import { BatchTab } from "@/components/admin/batch-tab"
 import { ProspectsTab } from "@/components/admin/prospects-tab"
 import { AccountsTab, LeadsTab, PropertiesTab } from "@/components/admin/tracker-tabs"
 
@@ -18,6 +19,7 @@ const TABS = [
   ["prospects", "Marketing list"],
   ["outreach", "Outreach"],
   ["score", "Score email"],
+  ["batch", "Batch reports"],
   ["leads", "Audit leads"],
 ] as const
 type Tab = (typeof TABS)[number][0]
@@ -82,6 +84,7 @@ export default function AdminPage() {
         {tab === "prospects" && <ProspectsTab />}
         {tab === "outreach" && <OutreachTab />}
         {tab === "score" && <ScoreEmailTab />}
+        {tab === "batch" && <BatchTab />}
         {tab === "leads" && overview && <LeadsTab leads={overview.leads} />}
       </div>
     </main>
